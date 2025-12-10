@@ -1,0 +1,608 @@
+//
+//  MainView.swift
+//  Time My Life Watch App
+//
+//  Created by Claude on 12/03/25.
+//
+
+import SwiftUI
+import SwiftData
+
+struct MainView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query private var allActivities: [Activity]
+    @Query private var allTimeEntries: [TimeEntry]
+
+    // Get current weekday (1=Sunday, 2=Monday, ..., 7=Saturday)
+    private var currentWeekday: Int {
+        Calendar.current.component(.weekday, from: Date())
+    }
+
+    // Filter activities scheduled for today
+    private var todayActivities: [Activity] {
+        allActivities.filter { $0.scheduledDays.contains(currentWeekday) }
+    }
+
+    // Get today's TimeEntry for a specific activity
+    private func todayDuration(for activity: Activity) -> TimeInterval {
+        let today = Calendar.current.startOfDay(for: Date())
+        if let entry = allTimeEntries.first(where: { $0.activityID == activity.id && $0.date == today }) {
+            return entry.totalDuration
+        }
+        return 0
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if todayActivities.isEmpty {
+                    ContentUnavailableView(
+                        "No Activities Today",
+                        systemImage: "calendar.badge.clock",
+                        description: Text("Add activities using the + button")
+                    )
+                } else {
+                    ForEach(todayActivities) { activity in
+                        ActivityRowView(
+                            activity: activity,
+                            todayDuration: todayDuration(for: activity)
+                        )
+                    }
+                }
+            }
+            .navigationTitle("Today")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    NavigationLink {
+                        SettingsView()
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                    }
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        ActivityFormView(mode: .create)
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Activity row component
+struct ActivityRowView: View {
+    let activity: Activity
+    let todayDuration: TimeInterval
+
+    var body: some View {
+        NavigationLink {
+            ActivityTimerView(activity: activity)
+        } label: {
+            // Colored blob containing the activity info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(activity.name)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+
+                // Show accumulated time if any
+                if todayDuration > 0 {
+                    Text(formatDuration(todayDuration))
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.9))
+                } else {
+                    Text("Not started")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.7))
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(activity.color())
+            )
+        }
+        .buttonStyle(.plain)
+        .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+    }
+
+    /// Format duration as HH:MM:SS or MM:SS
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let hours = Int(duration) / 3600
+        let minutes = (Int(duration) % 3600) / 60
+        let seconds = Int(duration) % 60
+
+        if hours > 0 {
+            return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            return String(format: "%02d:%02d", minutes, seconds)
+        }
+    }
+}
+
+// MARK: - Navigation Destination Placeholders
+
+struct AddActivityView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Query private var allActivities: [Activity]
+
+    @State private var name: String = ""
+    @State private var category: String = ""
+    @State private var selectedColorHex: String = "#007AFF" // Default blue
+    @State private var selectedDays: Set<Int> = [
+        Calendar.current.component(.weekday, from: Date())
+    ]
+    @State private var showError: Bool = false
+    @State private var errorMessage: String = ""
+    
+    private var selectedColor: Color {
+        Color(hex: selectedColorHex) ?? .blue
+    }
+    
+    // Helper to get color name (used in display)
+    private var selectedColorName: String {
+        let availableColors: [(hex: String, name: String)] = [
+            ("#FF3B30", "Red"),
+            ("#FF9500", "Orange"),
+            ("#FFCC00", "Yellow"),
+            ("#34C759", "Green"),
+            ("#007AFF", "Blue"),
+            ("#5856D6", "Purple"),
+            ("#AF52DE", "Pink"),
+            ("#FF2D55", "Pink Red"),
+            ("#5AC8FA", "Light Blue"),
+            ("#32D74B", "Light Green"),
+            ("#FFD60A", "Light Yellow"),
+            ("#FF6B35", "Coral")
+        ]
+        return availableColors.first(where: { $0.hex == selectedColorHex })?.name ?? "Blue"
+    }
+
+    // Validation matching Activity model's validation rules
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    private var trimmedCategory: String {
+        category.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    private var isValid: Bool {
+        // Name validation: 1-30 characters
+        let nameValid = !trimmedName.isEmpty && trimmedName.count <= 30
+        
+        // Category validation: max 20 characters (optional, so empty is OK)
+        let categoryValid = trimmedCategory.count <= 20
+        
+        // At least one day must be selected
+        let daysValid = !selectedDays.isEmpty
+        
+        // Activity limit: max 30 activities
+        let underLimit = allActivities.count < 30
+        
+        return nameValid && categoryValid && daysValid && underLimit
+    }
+    
+    private var activityLimitError: String? {
+        if allActivities.count >= 30 {
+            return "Maximum 30 activities allowed"
+        }
+        return nil
+    }
+    
+    private var nameValidationError: String? {
+        if trimmedName.isEmpty {
+            return "Name is required"
+        } else if trimmedName.count > 30 {
+            return "Name must not exceed 30 characters"
+        }
+        return nil
+    }
+    
+    private var categoryValidationError: String? {
+        if trimmedCategory.count > 20 {
+            return "Category must not exceed 20 characters"
+        }
+        return nil
+    }
+
+    private let weekdaySymbols = Calendar.current.shortWeekdaySymbols // ["Sun", "Mon", ...]
+
+    var body: some View {
+        List {
+            Section("Details") {
+                TextField("Activity name", text: $name)
+                    .textInputAutocapitalization(.words)
+                    .onChange(of: name) { oldValue, newValue in
+                        // Limit to 30 characters
+                        if newValue.count > 30 {
+                            name = String(newValue.prefix(30))
+                        }
+                    }
+
+                if let error = nameValidationError {
+                    Text(error)
+                        .font(.caption2)
+                        .foregroundStyle(.red)
+                } else {
+                    Text("\(30 - trimmedName.count) characters remaining")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+
+                TextField("Category (optional)", text: $category)
+                    .textInputAutocapitalization(.words)
+                    .onChange(of: category) { oldValue, newValue in
+                        // Limit to 20 characters
+                        if newValue.count > 20 {
+                            category = String(newValue.prefix(20))
+                        }
+                    }
+
+                if let error = categoryValidationError {
+                    Text(error)
+                        .font(.caption2)
+                        .foregroundStyle(.red)
+                } else if !trimmedCategory.isEmpty {
+                    Text("\(20 - trimmedCategory.count) characters remaining")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            
+            Section("Color") {
+                NavigationLink {
+                    ColorSelectionView(selectedColorHex: $selectedColorHex)
+                } label: {
+                    HStack {
+                        Text("Color")
+                        Spacer()
+                        Circle()
+                            .fill(selectedColor)
+                            .frame(width: 20, height: 20)
+                        Text(selectedColorName)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            Section("Scheduled Days") {
+                NavigationLink {
+                    WeekdaySelectionView(selectedDays: $selectedDays)
+                } label: {
+                    HStack {
+                        Text("Days")
+                        Spacer()
+                        if selectedDays.isEmpty {
+                            Text("None selected")
+                                .foregroundStyle(.red)
+                        } else {
+                            Text(formatSelectedDays(selectedDays))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                
+                if selectedDays.isEmpty {
+                    Text("Select at least one day")
+                        .font(.caption2)
+                        .foregroundStyle(.red)
+                }
+            }
+            
+            // Activity limit warning
+            if let limitError = activityLimitError {
+                Section {
+                    Text(limitError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+            }
+        }
+        .navigationTitle("Add Activity")
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Cancel") {
+                    dismiss()
+                }
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Save") {
+                    Task { @MainActor in
+                        await saveActivity()
+                    }
+                }
+                .disabled(!isValid)
+            }
+        }
+        .alert("Error", isPresented: $showError) {
+            Button("OK") { }
+        } message: {
+            Text(errorMessage)
+        }
+    }
+
+    private func weekdayLabel(for day: Int) -> String {
+        // Calendar weekday is 1=Sunday...7=Saturday, match shortWeekdaySymbols
+        let rawIndex = day - 1
+        let index = min(max(rawIndex, 0), weekdaySymbols.count - 1)
+        return weekdaySymbols[index]
+    }
+    
+    private func formatSelectedDays(_ days: Set<Int>) -> String {
+        let sortedDays = days.sorted()
+        let labels = sortedDays.map { weekdayLabel(for: $0) }
+        return labels.joined(separator: ", ")
+    }
+    
+    @MainActor
+    private func saveActivity() async {
+        do {
+            // Check activity limit
+            guard allActivities.count < 30 else {
+                errorMessage = "Maximum 30 activities allowed. Please delete an activity first."
+                showError = true
+                return
+            }
+
+            // Create and validate activity
+            let newActivity = try Activity.validated(
+                name: trimmedName,
+                colorHex: selectedColorHex,
+                category: trimmedCategory.isEmpty ? "Uncategorized" : trimmedCategory,
+                scheduledDays: Array(selectedDays)
+            )
+
+            // Insert and save
+            modelContext.insert(newActivity)
+            try modelContext.save()
+
+            print("✅ Activity '\(newActivity.name)' saved successfully")
+
+            // Dismiss view
+            dismiss()
+        } catch let error as ActivityValidationError {
+            errorMessage = error.localizedDescription
+            showError = true
+        } catch {
+            print("❌ Error saving activity: \(error.localizedDescription)")
+            errorMessage = "Failed to save activity: \(error.localizedDescription)"
+            showError = true
+        }
+    }
+}
+
+// MARK: - Color Selection View
+
+struct ColorSelectionView: View {
+    @Binding var selectedColorHex: String
+    @Environment(\.dismiss) private var dismiss
+    
+    // Predefined colors for watchOS (matching common system colors)
+    private let availableColors: [(hex: String, name: String)] = [
+        ("#FF3B30", "Red"),
+        ("#FF9500", "Orange"),
+        ("#FFCC00", "Yellow"),
+        ("#34C759", "Green"),
+        ("#007AFF", "Blue"),
+        ("#5856D6", "Purple"),
+        ("#AF52DE", "Pink"),
+        ("#FF2D55", "Pink Red"),
+        ("#5AC8FA", "Light Blue"),
+        ("#32D74B", "Light Green"),
+        ("#FFD60A", "Light Yellow"),
+        ("#FF6B35", "Coral")
+    ]
+    
+    var body: some View {
+        List {
+            ForEach(availableColors, id: \.hex) { colorOption in
+                Button {
+                    selectedColorHex = colorOption.hex
+                    dismiss()
+                } label: {
+                    HStack {
+                        Circle()
+                            .fill(Color(hex: colorOption.hex) ?? .blue)
+                            .frame(width: 24, height: 24)
+                        
+                        Text(colorOption.name)
+                        
+                        Spacer()
+                        
+                        if selectedColorHex == colorOption.hex {
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(.tint)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .navigationTitle("Select Color")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Weekday Selection View
+
+struct WeekdaySelectionView: View {
+    @Binding var selectedDays: Set<Int>
+    @Environment(\.dismiss) private var dismiss
+    
+    private let weekdaySymbols = Calendar.current.shortWeekdaySymbols
+    
+    var body: some View {
+        List {
+            ForEach(1...7, id: \.self) { day in
+                let label = weekdayLabel(for: day)
+                
+                Toggle(isOn: Binding(
+                    get: { selectedDays.contains(day) },
+                    set: { isOn in
+                        if isOn {
+                            selectedDays.insert(day)
+                        } else {
+                            selectedDays.remove(day)
+                        }
+                    }
+                )) {
+                    Text(label)
+                }
+            }
+            
+            if selectedDays.isEmpty {
+                Text("Select at least one day")
+                    .font(.caption2)
+                    .foregroundStyle(.red)
+            }
+        }
+        .navigationTitle("Select Days")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+    
+    private func weekdayLabel(for day: Int) -> String {
+        // Calendar weekday is 1=Sunday...7=Saturday, match shortWeekdaySymbols
+        let rawIndex = day - 1
+        let index = min(max(rawIndex, 0), weekdaySymbols.count - 1)
+        return weekdaySymbols[index]
+    }
+}
+
+/// SettingsView - List all activities for management
+struct SettingsView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Activity.name) private var allActivities: [Activity]
+
+    @State private var activityToDelete: Activity?
+    @State private var showDeleteConfirmation = false
+
+    var body: some View {
+        List {
+            if allActivities.isEmpty {
+                ContentUnavailableView(
+                    "No Activities Yet",
+                    systemImage: "tray",
+                    description: Text("Create activities using the + button on the main screen")
+                )
+            } else {
+                ForEach(allActivities) { activity in
+                    NavigationLink {
+                        ActivityFormView(mode: .edit(activity))
+                    } label: {
+                        HStack(spacing: 12) {
+                            // Color indicator
+                            Circle()
+                                .fill(activity.color())
+                                .frame(width: 12, height: 12)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(activity.name)
+                                    .font(.headline)
+
+                                Text(activity.category)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            // Wrench icon to indicate editable
+                            Image(systemName: "wrench.fill")
+                                .font(.caption)
+                                .foregroundStyle(.white)
+                        }
+                    }
+                }
+                .onDelete { indexSet in
+                    if let index = indexSet.first {
+                        activityToDelete = allActivities[index]
+                        showDeleteConfirmation = true
+                    }
+                }
+            }
+        }
+        .navigationTitle("All Activities")
+        .navigationBarTitleDisplayMode(.inline)
+        .alert("Delete Activity?", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {
+                activityToDelete = nil
+            }
+            Button("Delete", role: .destructive) {
+                if let activity = activityToDelete {
+                    deleteActivity(activity)
+                }
+            }
+        } message: {
+            if let activity = activityToDelete {
+                Text("This will permanently delete '\(activity.name)' and all associated time entries. This action cannot be undone.")
+            }
+        }
+    }
+
+    private func deleteActivity(_ activity: Activity) {
+        // Delete associated TimeEntries
+        let activityID = activity.id
+        let predicate = #Predicate<TimeEntry> { entry in
+            entry.activityID == activityID
+        }
+        let descriptor = FetchDescriptor<TimeEntry>(predicate: predicate)
+
+        do {
+            let entries = try modelContext.fetch(descriptor)
+            for entry in entries {
+                modelContext.delete(entry)
+            }
+
+            // Delete the activity
+            modelContext.delete(activity)
+            try modelContext.save()
+
+            print("✅ Activity '\(activity.name)' and \(entries.count) time entries deleted")
+            activityToDelete = nil
+        } catch {
+            print("❌ Error deleting activity: \(error.localizedDescription)")
+            activityToDelete = nil
+        }
+    }
+}
+
+
+/// Placeholder for ActivityTimerView (to be implemented in Phase 4)
+struct ActivityTimerView: View {
+    let activity: Activity
+
+    var body: some View {
+        VStack(spacing: 12) {
+            // Color indicator
+            Circle()
+                .fill(activity.color())
+                .frame(width: 30, height: 30)
+
+            Text(activity.name)
+                .font(.headline)
+
+            Text(activity.category)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text("Timer view coming soon")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .padding(.top, 8)
+        }
+        .navigationTitle("Timer")
+    }
+}
+
+#Preview {
+    MainView()
+        .modelContainer(for: [Activity.self, TimeEntry.self, ActiveTimer.self])
+}

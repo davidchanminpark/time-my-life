@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		85ACE4642EE8CC580095117F /* TimeMyLifeWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 85ACE4442EE8CC570095117F /* TimeMyLifeWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		85ACE38C2EE8C28C0095117F /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -21,12 +25,50 @@
 			remoteGlobalIDString = 85ACE3792EE8C28C0095117F;
 			remoteInfo = TimeMyLifeApp;
 		};
+		85ACE4512EE8CC580095117F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 85ACE3722EE8C28C0095117F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 85ACE4432EE8CC570095117F;
+			remoteInfo = "TimeMyLifeWatch Watch App";
+		};
+		85ACE45B2EE8CC580095117F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 85ACE3722EE8C28C0095117F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 85ACE4432EE8CC570095117F;
+			remoteInfo = "TimeMyLifeWatch Watch App";
+		};
+		85ACE4622EE8CC580095117F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 85ACE3722EE8C28C0095117F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 85ACE4432EE8CC570095117F;
+			remoteInfo = "TimeMyLifeWatch Watch App";
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		85ACE4682EE8CC580095117F /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				85ACE4642EE8CC580095117F /* TimeMyLifeWatch Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		85ACE37A2EE8C28C0095117F /* TimeMyLifeApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TimeMyLifeApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		85ACE38B2EE8C28C0095117F /* TimeMyLifeAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TimeMyLifeAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		85ACE3952EE8C28C0095117F /* TimeMyLifeAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TimeMyLifeAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		85ACE4442EE8CC570095117F /* TimeMyLifeWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "TimeMyLifeWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		85ACE4502EE8CC580095117F /* TimeMyLifeWatch Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "TimeMyLifeWatch Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		85ACE45A2EE8CC580095117F /* TimeMyLifeWatch Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "TimeMyLifeWatch Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -37,6 +79,25 @@
 			);
 			target = 85ACE3792EE8C28C0095117F /* TimeMyLifeApp */;
 		};
+		85ACE4702EE8DC260095117F /* Exceptions for "TimeMyLifeApp" folder in "TimeMyLifeWatch Watch App" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Models/ActiveTimer.swift,
+				Models/Activity.swift,
+				Models/TimeEntry.swift,
+				Services/DataService.swift,
+				Services/TimerService.swift,
+				"Utilities/Extensions/TimeInterval+Formatting.swift",
+				Utilities/Helpers/ActivityFormHelpers.swift,
+				Utilities/Helpers/SampleData.swift,
+				ViewModels/ActivityFormViewModel.swift,
+				ViewModels/CRUDTestViewModel.swift,
+				ViewModels/MainViewModel.swift,
+				ViewModels/SettingsViewModel.swift,
+				ViewModels/TimerViewModel.swift,
+			);
+			target = 85ACE4432EE8CC570095117F /* TimeMyLifeWatch Watch App */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -44,6 +105,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				85ACE39D2EE8C28C0095117F /* Exceptions for "TimeMyLifeApp" folder in "TimeMyLifeApp" target */,
+				85ACE4702EE8DC260095117F /* Exceptions for "TimeMyLifeApp" folder in "TimeMyLifeWatch Watch App" target */,
 			);
 			path = TimeMyLifeApp;
 			sourceTree = "<group>";
@@ -56,6 +118,21 @@
 		85ACE3982EE8C28C0095117F /* TimeMyLifeAppUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = TimeMyLifeAppUITests;
+			sourceTree = "<group>";
+		};
+		85ACE4452EE8CC570095117F /* TimeMyLifeWatch Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "TimeMyLifeWatch Watch App";
+			sourceTree = "<group>";
+		};
+		85ACE4532EE8CC580095117F /* TimeMyLifeWatch Watch AppTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "TimeMyLifeWatch Watch AppTests";
+			sourceTree = "<group>";
+		};
+		85ACE45D2EE8CC580095117F /* TimeMyLifeWatch Watch AppUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "TimeMyLifeWatch Watch AppUITests";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -82,6 +159,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		85ACE4412EE8CC570095117F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85ACE44D2EE8CC580095117F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85ACE4572EE8CC580095117F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -91,6 +189,9 @@
 				85ACE37C2EE8C28C0095117F /* TimeMyLifeApp */,
 				85ACE38E2EE8C28C0095117F /* TimeMyLifeAppTests */,
 				85ACE3982EE8C28C0095117F /* TimeMyLifeAppUITests */,
+				85ACE4452EE8CC570095117F /* TimeMyLifeWatch Watch App */,
+				85ACE4532EE8CC580095117F /* TimeMyLifeWatch Watch AppTests */,
+				85ACE45D2EE8CC580095117F /* TimeMyLifeWatch Watch AppUITests */,
 				85ACE37B2EE8C28C0095117F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -101,6 +202,9 @@
 				85ACE37A2EE8C28C0095117F /* TimeMyLifeApp.app */,
 				85ACE38B2EE8C28C0095117F /* TimeMyLifeAppTests.xctest */,
 				85ACE3952EE8C28C0095117F /* TimeMyLifeAppUITests.xctest */,
+				85ACE4442EE8CC570095117F /* TimeMyLifeWatch Watch App.app */,
+				85ACE4502EE8CC580095117F /* TimeMyLifeWatch Watch AppTests.xctest */,
+				85ACE45A2EE8CC580095117F /* TimeMyLifeWatch Watch AppUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -115,10 +219,12 @@
 				85ACE3762EE8C28C0095117F /* Sources */,
 				85ACE3772EE8C28C0095117F /* Frameworks */,
 				85ACE3782EE8C28C0095117F /* Resources */,
+				85ACE4682EE8CC580095117F /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				85ACE4632EE8CC580095117F /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				85ACE37C2EE8C28C0095117F /* TimeMyLifeApp */,
@@ -176,6 +282,74 @@
 			productReference = 85ACE3952EE8C28C0095117F /* TimeMyLifeAppUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		85ACE4432EE8CC570095117F /* TimeMyLifeWatch Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 85ACE4652EE8CC580095117F /* Build configuration list for PBXNativeTarget "TimeMyLifeWatch Watch App" */;
+			buildPhases = (
+				85ACE4402EE8CC570095117F /* Sources */,
+				85ACE4412EE8CC570095117F /* Frameworks */,
+				85ACE4422EE8CC570095117F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				85ACE4452EE8CC570095117F /* TimeMyLifeWatch Watch App */,
+			);
+			name = "TimeMyLifeWatch Watch App";
+			packageProductDependencies = (
+			);
+			productName = "TimeMyLifeWatch Watch App";
+			productReference = 85ACE4442EE8CC570095117F /* TimeMyLifeWatch Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
+		85ACE44F2EE8CC580095117F /* TimeMyLifeWatch Watch AppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 85ACE4692EE8CC580095117F /* Build configuration list for PBXNativeTarget "TimeMyLifeWatch Watch AppTests" */;
+			buildPhases = (
+				85ACE44C2EE8CC580095117F /* Sources */,
+				85ACE44D2EE8CC580095117F /* Frameworks */,
+				85ACE44E2EE8CC580095117F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				85ACE4522EE8CC580095117F /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				85ACE4532EE8CC580095117F /* TimeMyLifeWatch Watch AppTests */,
+			);
+			name = "TimeMyLifeWatch Watch AppTests";
+			packageProductDependencies = (
+			);
+			productName = "TimeMyLifeWatch Watch AppTests";
+			productReference = 85ACE4502EE8CC580095117F /* TimeMyLifeWatch Watch AppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		85ACE4592EE8CC580095117F /* TimeMyLifeWatch Watch AppUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 85ACE46C2EE8CC580095117F /* Build configuration list for PBXNativeTarget "TimeMyLifeWatch Watch AppUITests" */;
+			buildPhases = (
+				85ACE4562EE8CC580095117F /* Sources */,
+				85ACE4572EE8CC580095117F /* Frameworks */,
+				85ACE4582EE8CC580095117F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				85ACE45C2EE8CC580095117F /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				85ACE45D2EE8CC580095117F /* TimeMyLifeWatch Watch AppUITests */,
+			);
+			name = "TimeMyLifeWatch Watch AppUITests";
+			packageProductDependencies = (
+			);
+			productName = "TimeMyLifeWatch Watch AppUITests";
+			productReference = 85ACE45A2EE8CC580095117F /* TimeMyLifeWatch Watch AppUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -197,6 +371,17 @@
 						CreatedOnToolsVersion = 26.0;
 						TestTargetID = 85ACE3792EE8C28C0095117F;
 					};
+					85ACE4432EE8CC570095117F = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					85ACE44F2EE8CC580095117F = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = 85ACE4432EE8CC570095117F;
+					};
+					85ACE4592EE8CC580095117F = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = 85ACE4432EE8CC570095117F;
+					};
 				};
 			};
 			buildConfigurationList = 85ACE3752EE8C28C0095117F /* Build configuration list for PBXProject "TimeMyLifeApp" */;
@@ -216,6 +401,9 @@
 				85ACE3792EE8C28C0095117F /* TimeMyLifeApp */,
 				85ACE38A2EE8C28C0095117F /* TimeMyLifeAppTests */,
 				85ACE3942EE8C28C0095117F /* TimeMyLifeAppUITests */,
+				85ACE4432EE8CC570095117F /* TimeMyLifeWatch Watch App */,
+				85ACE44F2EE8CC580095117F /* TimeMyLifeWatch Watch AppTests */,
+				85ACE4592EE8CC580095117F /* TimeMyLifeWatch Watch AppUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -236,6 +424,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		85ACE3932EE8C28C0095117F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85ACE4422EE8CC570095117F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85ACE44E2EE8CC580095117F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85ACE4582EE8CC580095117F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -266,6 +475,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		85ACE4402EE8CC570095117F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85ACE44C2EE8CC580095117F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85ACE4562EE8CC580095117F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -278,6 +508,21 @@
 			isa = PBXTargetDependency;
 			target = 85ACE3792EE8C28C0095117F /* TimeMyLifeApp */;
 			targetProxy = 85ACE3962EE8C28C0095117F /* PBXContainerItemProxy */;
+		};
+		85ACE4522EE8CC580095117F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 85ACE4432EE8CC570095117F /* TimeMyLifeWatch Watch App */;
+			targetProxy = 85ACE4512EE8CC580095117F /* PBXContainerItemProxy */;
+		};
+		85ACE45C2EE8CC580095117F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 85ACE4432EE8CC570095117F /* TimeMyLifeWatch Watch App */;
+			targetProxy = 85ACE45B2EE8CC580095117F /* PBXContainerItemProxy */;
+		};
+		85ACE4632EE8CC580095117F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 85ACE4432EE8CC570095117F /* TimeMyLifeWatch Watch App */;
+			targetProxy = 85ACE4622EE8CC580095117F /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -547,6 +792,156 @@
 			};
 			name = Release;
 		};
+		85ACE4662EE8CC580095117F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = TimeMyLifeWatch;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = chanmin.TimeMyLifeApp;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = chanmin.TimeMyLifeApp.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		85ACE4672EE8CC580095117F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = TimeMyLifeWatch;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = chanmin.TimeMyLifeApp;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = chanmin.TimeMyLifeApp.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+		85ACE46A2EE8CC580095117F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "chanmin.TimeMyLifeWatch-Watch-AppTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TimeMyLifeWatch Watch App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TimeMyLifeWatch Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		85ACE46B2EE8CC580095117F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "chanmin.TimeMyLifeWatch-Watch-AppTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TimeMyLifeWatch Watch App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TimeMyLifeWatch Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+		85ACE46D2EE8CC580095117F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "chanmin.TimeMyLifeWatch-Watch-AppUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = "TimeMyLifeWatch Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		85ACE46E2EE8CC580095117F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "chanmin.TimeMyLifeWatch-Watch-AppUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = "TimeMyLifeWatch Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -582,6 +977,33 @@
 			buildConfigurations = (
 				85ACE3A72EE8C28C0095117F /* Debug */,
 				85ACE3A82EE8C28C0095117F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		85ACE4652EE8CC580095117F /* Build configuration list for PBXNativeTarget "TimeMyLifeWatch Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				85ACE4662EE8CC580095117F /* Debug */,
+				85ACE4672EE8CC580095117F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		85ACE4692EE8CC580095117F /* Build configuration list for PBXNativeTarget "TimeMyLifeWatch Watch AppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				85ACE46A2EE8CC580095117F /* Debug */,
+				85ACE46B2EE8CC580095117F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		85ACE46C2EE8CC580095117F /* Build configuration list for PBXNativeTarget "TimeMyLifeWatch Watch AppUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				85ACE46D2EE8CC580095117F /* Debug */,
+				85ACE46E2EE8CC580095117F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
