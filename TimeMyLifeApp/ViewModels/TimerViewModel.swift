@@ -69,11 +69,7 @@ public class TimerViewModel {
     /// Loads the accumulated time for this activity on the target date
     public func loadAccumulatedTime() async {
         do {
-            #if os(watchOS)
-            let entries = try dataService.fetchTimeEntriesForWatch(for: activity.id, on: targetDate)
-            #else
             let entries = try dataService.fetchTimeEntries(for: activity.id, on: targetDate)
-            #endif
             accumulatedTime = entries.first?.totalDuration ?? 0
         } catch {
             self.error = error
@@ -165,6 +161,11 @@ public class TimerViewModel {
         } else {
             return String(format: "%02d:%02d", minutes, seconds)
         }
+    }
+
+    /// Total displayed time (elapsed + accumulated)
+    public var displayedElapsedTime: TimeInterval {
+        return elapsedTime + accumulatedTime
     }
 
     /// Calculates dynamic font size based on elapsed time

@@ -84,9 +84,13 @@
 			membershipExceptions = (
 				Models/ActiveTimer.swift,
 				Models/Activity.swift,
+				Models/Goal.swift,
+				Models/ScheduledDay.swift,
 				Models/TimeEntry.swift,
 				Services/DataService.swift,
+				Services/SyncService.swift,
 				Services/TimerService.swift,
+				Services/WatchConnectivitySyncService.swift,
 				"Utilities/Extensions/TimeInterval+Formatting.swift",
 				Utilities/Helpers/ActivityFormHelpers.swift,
 				Utilities/Helpers/SampleData.swift,
@@ -535,6 +539,7 @@
 				CODE_SIGN_ENTITLEMENTS = TimeMyLifeApp/TimeMyLifeApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4SQ6CVUFYA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TimeMyLifeApp/Info.plist;
@@ -568,6 +573,7 @@
 				CODE_SIGN_ENTITLEMENTS = TimeMyLifeApp/TimeMyLifeApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4SQ6CVUFYA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TimeMyLifeApp/Info.plist;
@@ -799,6 +805,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4SQ6CVUFYA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = TimeMyLifeWatch;
@@ -831,6 +838,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 4SQ6CVUFYA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = TimeMyLifeWatch;

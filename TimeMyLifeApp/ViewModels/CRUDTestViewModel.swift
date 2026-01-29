@@ -49,18 +49,10 @@ public class CRUDTestViewModel {
             activityCount = try dataService.getActivityCount()
 
             // Get all activities and count their entries
-            #if os(watchOS)
-            let activities = try dataService.fetchActivitiesForWatch(scheduledFor: nil)
-            #else
             let activities = try dataService.fetchActivities(scheduledFor: nil)
-            #endif
             var totalEntries = 0
             for activity in activities {
-                #if os(watchOS)
-                let entries = try dataService.fetchAllTimeEntriesForWatch(for: activity.id)
-                #else
                 let entries = try dataService.fetchAllTimeEntries(for: activity.id)
-                #endif
                 totalEntries += entries.count
             }
             timeEntryCount = totalEntries
@@ -95,21 +87,13 @@ public class CRUDTestViewModel {
     /// Tests reading an activity
     public func testRead() async {
         do {
-            #if os(watchOS)
-            let activities = try dataService.fetchActivitiesForWatch(scheduledFor: nil)
-            #else
             let activities = try dataService.fetchActivities(scheduledFor: nil)
-            #endif
             guard let firstActivity = activities.first else {
                 logOperation("⚠️ READ: No activities to read")
                 return
             }
 
-            #if os(watchOS)
-            let activity = try? dataService.fetchActivityForWatch(id: firstActivity.id)
-            #else
             let activity = try? dataService.fetchActivity(id: firstActivity.id)
-            #endif
             if let activity = activity {
                 logOperation("✅ READ: Found activity '\(activity.name)'")
             } else {
@@ -123,11 +107,7 @@ public class CRUDTestViewModel {
     /// Tests updating an activity
     public func testUpdate() async {
         do {
-            #if os(watchOS)
-            let activities = try dataService.fetchActivitiesForWatch(scheduledFor: nil)
-            #else
             let activities = try dataService.fetchActivities(scheduledFor: nil)
-            #endif
             guard let firstActivity = activities.first else {
                 logOperation("⚠️ UPDATE: No activities to update")
                 return
@@ -149,11 +129,7 @@ public class CRUDTestViewModel {
     /// Tests deleting an activity
     public func testDelete() async {
         do {
-            #if os(watchOS)
-            let activities = try dataService.fetchActivitiesForWatch(scheduledFor: nil)
-            #else
             let activities = try dataService.fetchActivities(scheduledFor: nil)
-            #endif
             guard let lastActivity = activities.last else {
                 logOperation("⚠️ DELETE: No activities to delete")
                 return
@@ -171,11 +147,7 @@ public class CRUDTestViewModel {
     /// Tests timer operations
     public func testTimer() async {
         do {
-            #if os(watchOS)
-            let activities = try dataService.fetchActivitiesForWatch(scheduledFor: nil)
-            #else
             let activities = try dataService.fetchActivities(scheduledFor: nil)
-            #endif
             guard let testActivity = activities.first else {
                 // Create a test activity if none exists
                 let newActivity = try Activity.validated(
@@ -221,11 +193,7 @@ public class CRUDTestViewModel {
     /// Adds large time value to first activity
     public func addLargeTime(hours: Double) async {
         do {
-            #if os(watchOS)
-            let activities = try dataService.fetchActivitiesForWatch(scheduledFor: nil)
-            #else
             let activities = try dataService.fetchActivities(scheduledFor: nil)
-            #endif
             guard let firstActivity = activities.first else {
                 logOperation("⚠️ No activities found")
                 return

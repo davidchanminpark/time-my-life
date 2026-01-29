@@ -44,11 +44,7 @@ public class SettingsViewModel {
 
         do {
             // Fetch all activities (no weekday filter)
-            #if os(watchOS)
-            activities = try dataService.fetchActivitiesForWatch(scheduledFor: nil)
-            #else
             activities = try dataService.fetchActivities(scheduledFor: nil)
-            #endif
 
             #if DEBUG
             print("✅ SettingsViewModel: Loaded \(activities.count) activities")

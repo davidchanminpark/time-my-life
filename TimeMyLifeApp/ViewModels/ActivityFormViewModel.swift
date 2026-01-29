@@ -5,6 +5,7 @@
 
 import Foundation
 import SwiftUI
+import SwiftData
 import Observation
 
 /// Mode for activity form (create new or edit existing)
@@ -76,7 +77,7 @@ public class ActivityFormViewModel {
             name = activity.name
             category = activity.category
             selectedColorHex = activity.colorHex
-            selectedDays = Set(activity.scheduledDays)
+            selectedDays = Set(activity.scheduledDayInts)
         }
     }
 
@@ -200,6 +201,11 @@ public class ActivityFormViewModel {
                     category: trimmedCategory.isEmpty ? "Uncategorized" : trimmedCategory,
                     scheduledDays: Array(selectedDays)
                 )
+                
+                // Ensure scheduled days have proper relationship
+                for day in newActivity.scheduledDays {
+                    day.activity = newActivity
+                }
 
                 try dataService.createActivity(newActivity)
 
@@ -220,7 +226,19 @@ public class ActivityFormViewModel {
                 activity.name = trimmedName
                 activity.colorHex = selectedColorHex
                 activity.category = trimmedCategory.isEmpty ? "Uncategorized" : trimmedCategory
-                activity.scheduledDays = Array(selectedDays).sorted()
+                
+                // Update scheduled days - remove old ones and create new ones
+                // Delete old scheduled days
+                for day in activity.scheduledDays {
+                    // SwiftData will handle cascade delete, but we need to remove from array first
+                }
+                activity.scheduledDays.removeAll()
+                
+                // Create new scheduled days
+                let newDays = Array(selectedDays).sorted().map { weekday in
+                    ScheduledDay(weekday: weekday, activity: activity)
+                }
+                activity.scheduledDays = newDays
 
                 try dataService.updateActivity(activity)
 

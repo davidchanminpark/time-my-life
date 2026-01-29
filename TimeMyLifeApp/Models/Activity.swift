@@ -51,8 +51,9 @@ public final class Activity {
     /// Category/tag for grouping activities (e.g., "music", "social", "reading")
     public var category: String
 
-    /// Array of weekday integers where activity is scheduled (1=Sunday, 2=Monday, ..., 7=Saturday)
-    public var scheduledDays: [Int]
+    /// Array of scheduled days (relationship-based to avoid SwiftData reflection metadata issues)
+    @Relationship(deleteRule: .cascade, inverse: \ScheduledDay.activity)
+    public var scheduledDays: [ScheduledDay]
 
     /// Timestamp when the activity was created
     public var createdAt: Date
@@ -73,8 +74,18 @@ public final class Activity {
         self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         self.colorHex = Self.normalizeHex(colorHex)
         self.category = category.trimmingCharacters(in: .whitespacesAndNewlines)
-        self.scheduledDays = Array(Set(scheduledDays)).sorted() // Remove duplicates
         self.createdAt = createdAt
+        
+        // Convert [Int] to [ScheduledDay] for SwiftData relationship
+        // Must set scheduledDays first, then update activity references
+        let uniqueDays = Array(Set(scheduledDays)).sorted()
+        let days = uniqueDays.map { ScheduledDay(weekday: $0) }
+        self.scheduledDays = days
+        
+        // Now that all members are initialized, set the activity reference
+        for day in self.scheduledDays {
+            day.activity = self
+        }
     }
 
     /// Validates activity data and returns an Activity if valid
@@ -118,8 +129,8 @@ public final class Activity {
             }
         }
 
-        // Create and return validated activity
-        return Activity(
+        // Create activity with validated data
+        let activity = Activity(
             id: id,
             name: trimmedName,
             colorHex: normalizedHex,
@@ -127,6 +138,7 @@ public final class Activity {
             scheduledDays: uniqueDays,
             createdAt: createdAt
         )
+        return activity
     }
 
     // MARK: - Validation Helpers
@@ -168,7 +180,13 @@ public final class Activity {
     /// - Parameter weekday: Integer representing the weekday (1=Sunday, 2=Monday, ..., 7=Saturday)
     /// - Returns: True if the activity is scheduled for the given weekday
     public func isScheduledFor(weekday: Int) -> Bool {
-        return scheduledDays.contains(weekday)
+        return scheduledDays.contains { $0.weekday == weekday }
+    }
+    
+    /// Convenience method to get weekday integers from scheduled days
+    /// - Returns: Array of weekday integers
+    public var scheduledDayInts: [Int] {
+        return scheduledDays.map { $0.weekday }.sorted()
     }
 
     /// Checks if the activity is scheduled for today
@@ -194,6 +212,50 @@ public final class Activity {
         //"#FFB3E6"
         return .white
         return lightPastelColors.contains(colorHex.uppercased()) ? Color(white: 0.5) : .white
+    }
+}
+
+// MARK: - Codable Conformance for Syncing
+
+extension Activity: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case colorHex
+        case category
+        case scheduledDays
+        case createdAt
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(colorHex, forKey: .colorHex)
+        try container.encode(category, forKey: .category)
+        // Encode scheduledDays as array of integers for syncing
+        try container.encode(scheduledDayInts, forKey: .scheduledDays)
+        try container.encode(createdAt, forKey: .createdAt)
+    }
+    
+    public convenience init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let id = try container.decode(UUID.self, forKey: .id)
+        let name = try container.decode(String.self, forKey: .name)
+        let colorHex = try container.decode(String.self, forKey: .colorHex)
+        let category = try container.decode(String.self, forKey: .category)
+        let scheduledDays = try container.decode([Int].self, forKey: .scheduledDays)
+        let createdAt = try container.decode(Date.self, forKey: .createdAt)
+        
+        // Use the standard initializer which handles ScheduledDay relationship
+        self.init(
+            id: id,
+            name: name,
+            colorHex: colorHex,
+            category: category,
+            scheduledDays: scheduledDays,
+            createdAt: createdAt
+        )
     }
 }
 

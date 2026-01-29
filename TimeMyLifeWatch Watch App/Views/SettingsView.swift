@@ -33,6 +33,14 @@ struct SettingsView: View {
 
     var body: some View {
         List {
+            Section("Debug") {
+                NavigationLink {
+                    SyncDebugView()
+                } label: {
+                    Label("Sync Status", systemImage: "arrow.triangle.2.circlepath")
+                }
+            }
+
             if vm.activities.isEmpty {
                 ContentUnavailableView(
                     "No Activities Yet",

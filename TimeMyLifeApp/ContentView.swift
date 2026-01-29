@@ -9,53 +9,64 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    let dataService: DataService
+    let timerService: TimerService
+    let syncService: WatchConnectivitySyncService?
+
+    @State private var selectedTab = 0
+
+    init(dataService: DataService, timerService: TimerService, syncService: WatchConnectivitySyncService? = nil) {
+        self.dataService = dataService
+        self.timerService = timerService
+        self.syncService = syncService
+    }
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
+        TabView(selection: $selectedTab) {
+            HomeView(dataService: dataService, timerService: timerService)
+                .tabItem {
+                    Label("Home", systemImage: "house.fill")
                 }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-        } detail: {
-            Text("Select an item")
-        }
-    }
+                .tag(0)
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
+            GoalsView(dataService: dataService)
+                .tabItem {
+                    Label("Goals", systemImage: "target")
+                }
+                .tag(1)
 
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
+            StatsView(dataService: dataService)
+                .tabItem {
+                    Label("Stats", systemImage: "chart.bar.fill")
+                }
+                .tag(2)
+
+            SettingsView(dataService: dataService, syncService: syncService)
+                .tabItem {
+                    Label("Settings", systemImage: "gearshape.fill")
+                }
+                .tag(3)
         }
     }
 }
 
 #Preview {
-    ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let schema = Schema([
+        Activity.self,
+        TimeEntry.self,
+        ActiveTimer.self,
+        Goal.self
+    ])
+    let container = try! ModelContainer(
+        for: schema,
+        configurations: config
+    )
+
+    let context = container.mainContext
+    let dataService = DataService(modelContext: context)
+    let timerService = TimerService(modelContext: context)
+
+    ContentView(dataService: dataService, timerService: timerService)
+        .modelContainer(container)
 }

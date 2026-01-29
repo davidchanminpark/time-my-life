@@ -149,3 +149,38 @@ public extension TimeEntry {
         return results.first
     }
 }
+
+// MARK: - Codable Conformance for Syncing
+
+extension TimeEntry: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case activityID
+        case date
+        case totalDuration
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(activityID, forKey: .activityID)
+        try container.encode(date, forKey: .date)
+        try container.encode(totalDuration, forKey: .totalDuration)
+    }
+    
+    public convenience init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let id = try container.decode(UUID.self, forKey: .id)
+        let activityID = try container.decode(UUID.self, forKey: .activityID)
+        let date = try container.decode(Date.self, forKey: .date)
+        let totalDuration = try container.decode(TimeInterval.self, forKey: .totalDuration)
+        
+        // Use the standard initializer which handles date normalization
+        self.init(
+            id: id,
+            activityID: activityID,
+            date: date,
+            totalDuration: totalDuration
+        )
+    }
+}

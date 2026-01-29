@@ -24,6 +24,9 @@ struct TimeMyLifeWatch_Watch_AppApp: App {
         /// Timer service for managing timer state
         let timerService: TimerService
 
+        /// Sync service for watchOS ↔ iOS communication
+        let syncService: WatchConnectivitySyncService
+
         // MARK: - Scene Phase Tracking
 
         @Environment(\.scenePhase) private var scenePhase
@@ -32,20 +35,23 @@ struct TimeMyLifeWatch_Watch_AppApp: App {
 
         init() {
             do {
-                // Create schema with all three models
+                // Create schema with all models (including Goal for future iOS sync)
                 let schema = Schema([
                     Activity.self,
+                    ScheduledDay.self,
                     TimeEntry.self,
-                    ActiveTimer.self
+                    ActiveTimer.self,
+                    Goal.self
                 ])
 
-                // Configure model container
+                // Configure model container for local-only storage
+                // No CloudKit - will use WatchConnectivity for sync with iOS
                 // Note: If you see "CoreData: error: Recovery attempt... was successful!" in console,
                 // this is NOT an error - it means SwiftData automatically recovered from a database issue.
                 // This can happen if the app was force-quit during a write operation, but recovery is automatic.
                 let modelConfiguration = ModelConfiguration(
                     schema: schema,
-                    isStoredInMemoryOnly: false // Persist to disk
+                    isStoredInMemoryOnly: false
                 )
 
                 // Initialize ModelContainer with error handling
@@ -54,9 +60,21 @@ struct TimeMyLifeWatch_Watch_AppApp: App {
                     configurations: [modelConfiguration]
                 )
 
-                // Initialize services
-                self.dataService = DataService(modelContext: modelContainer.mainContext)
+                // Initialize sync service
+                let sync = WatchConnectivitySyncService()
+                self.syncService = sync
+
+                // Initialize services with sync
+                self.dataService = DataService(
+                    modelContext: modelContainer.mainContext,
+                    syncService: sync
+                )
                 self.timerService = TimerService(modelContext: modelContainer.mainContext)
+
+                // Activate sync service
+                Task { @MainActor in
+                    sync.activate()
+                }
 
                 // Ensure ActiveTimer singleton exists on first launch
                 let container = modelContainer

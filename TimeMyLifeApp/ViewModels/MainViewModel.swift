@@ -32,6 +32,9 @@ public class MainViewModel {
     /// Error state
     public var error: Error?
 
+    /// Refresh trigger - increment this to force view updates
+    public var refreshTrigger: Int = 0
+
     public var dataService: DataService
     public var timerService: TimerService
     // MARK: - View Mode
@@ -46,6 +49,30 @@ public class MainViewModel {
     public init(dataService: DataService, timerService: TimerService) {
         self.dataService = dataService
         self.timerService = timerService
+
+        // Listen for synced time entries
+        NotificationCenter.default.addObserver(
+            forName: .timeEntryDidSync,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                await self?.loadActivities()
+                self?.refreshTrigger += 1
+            }
+        }
+
+        // Listen for synced activities
+        NotificationCenter.default.addObserver(
+            forName: .activityDidSync,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                await self?.loadActivities()
+                self?.refreshTrigger += 1
+            }
+        }
     }
 
     // MARK: - Public Methods
@@ -57,10 +84,14 @@ public class MainViewModel {
 
         do {
             let weekday = targetWeekday
-            #if os(watchOS)
-            activities = try dataService.fetchActivitiesForWatch(scheduledFor: weekday)
-            #else
-            activities = try dataService.fetchActivities(scheduledFor: weekday)
+            let fetchedActivities = try dataService.fetchActivities(scheduledFor: weekday)
+
+            // Force update by creating a new array to trigger SwiftUI observation
+            activities = []
+            activities = fetchedActivities
+
+            #if DEBUG
+            print("🔄 MainViewModel: Loaded \(fetchedActivities.count) activities for weekday \(weekday)")
             #endif
         } catch {
             self.error = error
@@ -123,11 +154,7 @@ public class MainViewModel {
     /// - Returns: Total duration in seconds
     public func durationForDate(activity: Activity) -> TimeInterval {
         do {
-            #if os(watchOS)
-            let entries = try dataService.fetchTimeEntriesForWatch(for: activity.id, on: targetDate)
-            #else
             let entries = try dataService.fetchTimeEntries(for: activity.id, on: targetDate)
-            #endif
             return entries.first?.totalDuration ?? 0
         } catch {
             #if DEBUG
