@@ -1,7 +1,13 @@
+# Claude Code files
+.claude/
+plan-ios.md
+CLAUDE.md
+plan.md
+.gitignore
+
 # Xcode
 #
 # gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
-.gitignore
 
 ## User settings
 xcuserdata/
