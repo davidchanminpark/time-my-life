@@ -13,7 +13,7 @@ import Observation
 @MainActor
 public class DataService {
     internal let modelContext: ModelContext
-    private var syncService: SyncService?
+    var syncService: SyncService?
     
     public init(modelContext: ModelContext, syncService: SyncService? = nil) {
         self.modelContext = modelContext
@@ -131,11 +131,22 @@ public class DataService {
         }
     }
     
-    /// Deletes an activity and all associated time entries
+    /// Deletes an activity, its goals, and all associated time entries
     /// - Parameter activity: Activity to delete
     /// - Throws: Error if delete or save fails
     public func deleteActivity(_ activity: Activity) throws {
         let activityID = activity.id
+        
+        // Goals reference activities by `activityID` only (no SwiftData relationship) — remove them explicitly
+        let goalPredicate = #Predicate<Goal> { goal in
+            goal.activityID == activityID
+        }
+        let goalDescriptor = FetchDescriptor<Goal>(predicate: goalPredicate)
+        let goals = try modelContext.fetch(goalDescriptor)
+        let goalIDs = goals.map(\.id)
+        for goal in goals {
+            modelContext.delete(goal)
+        }
         
         // Cascade delete: Remove all TimeEntries associated with this activity
         let predicate = #Predicate<TimeEntry> { entry in
@@ -152,8 +163,11 @@ public class DataService {
         modelContext.delete(activity)
         try modelContext.save()
         
-        // Sync delete to counterpart device
+        // Sync deletes to counterpart device
         Task {
+            for goalID in goalIDs {
+                try? await syncService?.syncDelete(id: goalID, type: .goal)
+            }
             try? await syncService?.syncDelete(id: activityID, type: .activity)
         }
     }
@@ -329,6 +343,49 @@ public class DataService {
         return entries.reduce(0) { $0 + $1.totalDuration }
     }
     
+    /// Years to show in Year in Review: from earliest time entry or activity creation through the current calendar year (never future years).
+    public func yearsWithTrackingHistory() throws -> [Int] {
+        let cal = Calendar.current
+        let currentYear = cal.component(.year, from: Date())
+        var startYear = currentYear
+        
+        let entryDescriptor = FetchDescriptor<TimeEntry>(sortBy: [SortDescriptor(\.date, order: .forward)])
+        if let firstEntry = try modelContext.fetch(entryDescriptor).first {
+            startYear = min(startYear, cal.component(.year, from: firstEntry.date))
+        }
+        
+        let activityDescriptor = FetchDescriptor<Activity>(sortBy: [SortDescriptor(\.createdAt, order: .forward)])
+        if let firstActivity = try modelContext.fetch(activityDescriptor).first {
+            startYear = min(startYear, cal.component(.year, from: firstActivity.createdAt))
+        }
+        
+        if startYear > currentYear { startYear = currentYear }
+        return Array(startYear...currentYear)
+    }
+    
+    /// Start of the earliest month the calendar may show: not before the first activity’s calendar month,
+    /// and within a rolling window of 12 calendar months including the current month (so at most 11 months back from the current month start).
+    public func earliestCalendarDisplayMonthStart() throws -> Date {
+        let cal = Calendar.current
+        let now = Date()
+        guard let startOfCurrentMonth = cal.date(from: cal.dateComponents([.year, .month], from: now)) else {
+            return cal.startOfDay(for: now)
+        }
+        guard let twelveMonthWindowStart = cal.date(byAdding: .month, value: -11, to: startOfCurrentMonth) else {
+            return startOfCurrentMonth
+        }
+        
+        let activityDescriptor = FetchDescriptor<Activity>(sortBy: [SortDescriptor(\.createdAt, order: .forward)])
+        guard let firstActivity = try modelContext.fetch(activityDescriptor).first else {
+            return startOfCurrentMonth
+        }
+        let parts = cal.dateComponents([.year, .month], from: firstActivity.createdAt)
+        guard let firstActivityMonthStart = cal.date(from: parts) else {
+            return max(twelveMonthWindowStart, startOfCurrentMonth)
+        }
+        return max(firstActivityMonthStart, twelveMonthWindowStart)
+    }
+    
     // MARK: - Utility Methods
     
     /// Clears all data from the database (useful for testing)
@@ -366,11 +423,12 @@ public class DataService {
         return count > 0
     }
     
-    
     // MARK: - Sync Message Handling
     
-    /// Handles sync messages received from counterpart device
-    private func handleReceivedSyncMessage(_ message: SyncMessage) async {
+    /// Handles sync messages received from counterpart device.
+    /// Goal sync (`handleGoalSync`) lives in `DataServiceGoalExtensions.swift` so it can use `fetchGoal` there.
+    /// The Watch app target must include that file (see Xcode target membership / synchronized folder exceptions).
+    func handleReceivedSyncMessage(_ message: SyncMessage) async {
         do {
             switch message.modelType {
             case .activity:
@@ -486,22 +544,13 @@ public class DataService {
             }
         }
     }
-    
-    private func handleGoalSync(_ message: SyncMessage) async throws {
-        // Goal sync implementation (to be added when Goal operations are implemented)
-#if DEBUG
-        print("⚠️ Goal sync not yet implemented")
-#endif
-    }
 }
 
 
 
 extension DataService {
+    @MainActor
     static var preview: DataService {
-        let schema = Schema([Activity.self, TimeEntry.self, ActiveTimer.self])
-        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: schema, configurations: [config])
-        return DataService(modelContext: container.mainContext)
+        IOSViewPreviewSupport.dependencies().1
     }
 }

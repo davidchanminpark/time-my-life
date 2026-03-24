@@ -2,8 +2,6 @@
 //  ContentView.swift
 //  TimeMyLifeApp
 //
-//  Created by Chanmin Park on 12/9/25.
-//
 
 import SwiftUI
 import SwiftData
@@ -19,54 +17,90 @@ struct ContentView: View {
         self.dataService = dataService
         self.timerService = timerService
         self.syncService = syncService
+        // Hide the system tab bar globally so our custom one takes over
+        UITabBar.appearance().isHidden = true
     }
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            HomeView(dataService: dataService, timerService: timerService)
-                .tabItem {
-                    Label("Home", systemImage: "house.fill")
-                }
-                .tag(0)
+        ZStack(alignment: .bottom) {
+            TabView(selection: $selectedTab) {
+                HomeView(dataService: dataService, timerService: timerService)
+                    .tag(0)
 
-            GoalsView(dataService: dataService)
-                .tabItem {
-                    Label("Goals", systemImage: "target")
-                }
-                .tag(1)
+                GoalsView(dataService: dataService)
+                    .tag(1)
 
-            StatsView(dataService: dataService)
-                .tabItem {
-                    Label("Stats", systemImage: "chart.bar.fill")
-                }
-                .tag(2)
+                StatsView(dataService: dataService)
+                    .tag(2)
 
-            SettingsView(dataService: dataService, syncService: syncService)
-                .tabItem {
-                    Label("Settings", systemImage: "gearshape.fill")
-                }
-                .tag(3)
+                SettingsView(dataService: dataService, syncService: syncService)
+                    .tag(3)
+            }
+            // Reserve space at the bottom so list content scrolls above the floating bar
+            .safeAreaInset(edge: .bottom) {
+                Color.clear.frame(height: 90)
+            }
+
+            FloatingTabBar(selectedTab: $selectedTab)
         }
+        .ignoresSafeArea(.keyboard)
     }
 }
 
-#Preview {
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let schema = Schema([
-        Activity.self,
-        TimeEntry.self,
-        ActiveTimer.self,
-        Goal.self
-    ])
-    let container = try! ModelContainer(
-        for: schema,
-        configurations: config
-    )
+// MARK: - Floating Pill Tab Bar
 
-    let context = container.mainContext
-    let dataService = DataService(modelContext: context)
-    let timerService = TimerService(modelContext: context)
+private struct FloatingTabBar: View {
+    @Binding var selectedTab: Int
 
-    ContentView(dataService: dataService, timerService: timerService)
-        .modelContainer(container)
+    private let items: [(icon: String, tag: Int)] = [
+        ("house.fill", 0),
+        ("target", 1),
+        ("chart.bar.fill", 2),
+        ("gearshape.fill", 3)
+    ]
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(items, id: \.tag) { item in
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.72)) {
+                        selectedTab = item.tag
+                    }
+                } label: {
+                    Image(systemName: item.icon)
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(
+                            selectedTab == item.tag
+                                ? Color.appAccent
+                                : Color.secondary.opacity(0.45)
+                        )
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 15)
+                        .background {
+                            if selectedTab == item.tag {
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(Color.appTabSelected.opacity(0.35))
+                                    .padding(.horizontal, 6)
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(Color.white)
+        .clipShape(Capsule())
+        .shadow(color: .black.opacity(0.10), radius: 22, x: 0, y: 5)
+        .padding(.horizontal, 32)
+        .padding(.bottom, 20)
+    }
+}
+
+#Preview("Full app — floating tab bar") {
+    IOSPreviewFullAppShell()
+}
+
+#Preview("Full app — floating tab bar (empty store)") {
+    IOSPreviewFullAppShell(seedSample: false)
 }

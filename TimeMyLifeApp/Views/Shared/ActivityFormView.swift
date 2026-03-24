@@ -4,52 +4,7 @@
 //
 
 import SwiftUI
-
-// fileprivate extension Color {
-//     init?(hex: String) {
-//         var hexString = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-//         if hexString.count == 3 { // shorthand like FFF
-//             let r = hexString[hexString.startIndex]
-//             let g = hexString[hexString.index(hexString.startIndex, offsetBy: 1)]
-//             let b = hexString[hexString.index(hexString.startIndex, offsetBy: 2)]
-//             hexString = "\(r)\(r)\(g)\(g)\(b)\(b)"
-//         }
-//         guard hexString.count == 6 || hexString.count == 8 else { return nil }
-//         var int: UInt64 = 0
-//         Scanner(string: hexString).scanHexInt64(&int)
-//         let a, r, g, b: UInt64
-//         if hexString.count == 8 {
-//             a = (int & 0xFF000000) >> 24
-//             r = (int & 0x00FF0000) >> 16
-//             g = (int & 0x0000FF00) >> 8
-//             b = (int & 0x000000FF)
-//         } else {
-//             a = 255
-//             r = (int & 0xFF0000) >> 16
-//             g = (int & 0x00FF00) >> 8
-//             b = (int & 0x0000FF)
-//         }
-//         self = Color(.sRGB, red: Double(r) / 255.0, green: Double(g) / 255.0, blue: Double(b) / 255.0, opacity: Double(a) / 255.0)
-//     }
-
-//     func toHex(includeAlpha: Bool = false) -> String? {
-//         #if canImport(UIKit)
-//         let uiColor = UIColor(self)
-//         var r: CGFloat = 0
-//         var g: CGFloat = 0
-//         var b: CGFloat = 0
-//         var a: CGFloat = 0
-//         guard uiColor.getRed(&r, green: &g, blue: &b, alpha: &a) else { return nil }
-//         if includeAlpha {
-//             return String(format: "%02X%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255), Int(a * 255))
-//         } else {
-//             return String(format: "%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
-//         }
-//         #else
-//         return nil
-//         #endif
-//     }
-// }
+import SwiftData
 
 struct ActivityFormView: View {
     enum Mode {
@@ -61,6 +16,8 @@ struct ActivityFormView: View {
     let dataService: DataService
 
     @State private var viewModel: ActivityFormViewModel
+    @State private var showEmojiPicker = false
+    @State private var showAddTimeEntry = false
     @Environment(\.dismiss) private var dismiss
 
     init(mode: Mode, dataService: DataService) {
@@ -81,118 +38,603 @@ struct ActivityFormView: View {
         }
     }
 
+    // MARK: - Body
+
     var body: some View {
-        Form {
-            detailsSection
-            colorSection
-            scheduleSection
-            if let errorMessage = viewModel.validationError {
-                errorSection(errorMessage)
+        ZStack {
+            Color.appBackground.ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 14) {
+                    previewAndNameCard
+                    colorCard
+                    scheduleCard
+
+                    if case .edit = mode {
+                        addTimeEntrySection
+                        deleteSection
+                    }
+
+                    if let error = viewModel.validationError {
+                        Text(error)
+                            .font(.system(.caption, design: .rounded))
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 4)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 32)
             }
         }
         .navigationTitle(mode.title)
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
                     dismiss()
+                } label: {
+                    Image(systemName: "chevron.backward")
+                        .font(.system(size: 17, weight: .semibold))
+                        .accessibilityLabel("Back")
                 }
             }
-
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
+                Button {
                     Task {
-                        do {
-                            if try await viewModel.save() {
-                                dismiss()
-                            }
-                        } catch {
-                            // Error is already handled in ViewModel (validationError is set)
-                            // Just log for debugging
-                            #if DEBUG
-                            print("Error saving activity: \(error)")
-                            #endif
-                        }
+                        do { if try await viewModel.save() { dismiss() } } catch {}
                     }
+                } label: {
+                    Text("Save")
+                        .font(.system(.body, design: .rounded, weight: .semibold))
+                        .foregroundStyle(viewModel.isValid ? Color.appAccent : Color.secondary)
                 }
                 .disabled(!viewModel.isValid)
             }
         }
+        .sheet(isPresented: $showAddTimeEntry) {
+            if case .edit(let activity) = mode {
+                AddTimeEntrySheet(activity: activity, dataService: dataService)
+            }
+        }
+        .sheet(isPresented: $showEmojiPicker) {
+            EmojiPickerSheet(selectedEmoji: Binding(
+                get: { viewModel.emoji },
+                set: { viewModel.emoji = $0 }
+            ))
+        }
+        .alert("Delete Activity?", isPresented: $viewModel.showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                Task {
+                    do {
+                        if try await viewModel.delete() {
+                            dismiss()
+                        }
+                    } catch {
+                        viewModel.validationError = "Couldn't delete activity"
+                    }
+                }
+            }
+        } message: {
+            Text("This will permanently delete “\(viewModel.trimmedName)” and all associated time entries. This action cannot be undone.")
+        }
     }
-    
-    // MARK: - View Components
-    
-    private var detailsSection: some View {
-        Section("Details") {
-            TextField("Activity Name", text: Binding(
+
+    private var addTimeEntrySection: some View {
+        Button {
+            showAddTimeEntry = true
+        } label: {
+            Label("Add Time Entry", systemImage: "plus.circle")
+                .font(.system(.body, design: .rounded, weight: .semibold))
+                .foregroundStyle(Color.appAccent)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
+        .appCard()
+    }
+
+    private var deleteSection: some View {
+        Button(role: .destructive) {
+            viewModel.showDeleteConfirmation = true
+        } label: {
+            Text("Delete Activity")
+                .font(.system(.body, design: .rounded, weight: .semibold))
+                .foregroundStyle(.red)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
+        .tint(.red)
+        .appCard()
+    }
+
+    // MARK: - Preview + Name Card
+
+    private var previewAndNameCard: some View {
+        VStack(spacing: 0) {
+            // Tappable avatar preview
+            HStack {
+                Spacer()
+                ZStack(alignment: .bottomTrailing) {
+                    Button { showEmojiPicker = true } label: {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 22)
+                                .fill(
+                                    viewModel.emoji.isEmpty
+                                        ? (Color(hex: viewModel.selectedColorHex) ?? .appAccent)
+                                        : (Color(hex: viewModel.selectedColorHex) ?? .appAccent).opacity(0.18)
+                                )
+                                .frame(width: 80, height: 80)
+                                .shadow(
+                                    color: (Color(hex: viewModel.selectedColorHex) ?? .appAccent).opacity(0.3),
+                                    radius: 16, x: 0, y: 6
+                                )
+                            if viewModel.emoji.isEmpty {
+                                Text(viewModel.name.isEmpty ? "?" : String(viewModel.name.prefix(1)).uppercased())
+                                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Color(white: 0.18))
+                            } else {
+                                Text(viewModel.emoji)
+                                    .font(.system(size: 42))
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .animation(.spring(response: 0.3), value: viewModel.selectedColorHex)
+                    .animation(.spring(response: 0.3), value: viewModel.emoji)
+
+                    // Edit badge
+                    Image(systemName: "pencil")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 22, height: 22)
+                        .background(Color.appAccent)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
+                        .offset(x: 3, y: 3)
+                }
+                Spacer()
+            }
+            .padding(.top, 20)
+            .padding(.bottom, 18)
+
+            Divider().opacity(0.5)
+
+            TextField("Activity name", text: Binding(
                 get: { viewModel.name },
                 set: { viewModel.name = $0 }
             ))
-            TextField("Category", text: Binding(
+            .font(.system(.title3, design: .rounded, weight: .medium))
+            .textInputAutocapitalization(.words)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
+
+            Divider().opacity(0.5)
+
+            TextField("Category (optional)", text: Binding(
                 get: { viewModel.category },
                 set: { viewModel.category = $0 }
             ))
+            .font(.system(.subheadline, design: .rounded))
+            .foregroundStyle(.secondary)
+            .textInputAutocapitalization(.words)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 13)
         }
+        .appCard()
     }
-    
-    private var colorSection: some View {
-        Section("Color") {
-            ColorPicker("Select Color", selection: Binding(
-                get: { Color(hex: viewModel.selectedColorHex) ?? .blue },
-                set: { newColor in
-                    if let hex = newColor.toHex() {
-                        viewModel.selectedColorHex = hex
-                    }
+
+    // MARK: - Color Card
+
+    private var colorCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("COLOR")
+                .font(.system(.caption, design: .rounded, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .tracking(0.5)
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 5), spacing: 10) {
+                ForEach(ActivityFormHelpers.availableColors, id: \.hex) { item in
+                    colorCircle(hex: item.hex)
                 }
-            ))
+            }
         }
+        .padding(18)
+        .appCard()
     }
-    
-    private var scheduleSection: some View {
-        Section("Schedule") {
-            ForEach(daysOfWeek, id: \.number) { day in
-                Toggle(day.name, isOn: Binding(
-                    get: { viewModel.selectedDays.contains(day.number) },
-                    set: { isOn in
-                        if isOn {
-                            viewModel.selectedDays.insert(day.number)
-                        } else {
-                            viewModel.selectedDays.remove(day.number)
+
+    private func colorCircle(hex: String) -> some View {
+        let isSelected = viewModel.selectedColorHex.uppercased() == hex.uppercased()
+        return Button {
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                viewModel.selectedColorHex = hex
+            }
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(Color(hex: hex) ?? .gray)
+                    .frame(width: 36, height: 36)
+                if isSelected {
+                    Circle()
+                        .strokeBorder(Color(white: 0.2).opacity(0.55), lineWidth: 2.5)
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color(white: 0.18))
+                }
+            }
+            .scaleEffect(isSelected ? 1.12 : 1.0)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Schedule Card
+
+    private var scheduleCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("SCHEDULE")
+                .font(.system(.caption, design: .rounded, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .tracking(0.5)
+
+            HStack(spacing: 8) {
+                ForEach(dayChips, id: \.number) { day in
+                    dayPill(day: day)
+                }
+            }
+        }
+        .padding(18)
+        .appCard()
+    }
+
+    private func dayPill(day: (number: Int, short: String)) -> some View {
+        let isSelected = viewModel.selectedDays.contains(day.number)
+        return Button {
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
+                if isSelected { viewModel.selectedDays.remove(day.number) }
+                else          { viewModel.selectedDays.insert(day.number) }
+            }
+        } label: {
+            Text(day.short)
+                .font(.system(.caption, design: .rounded, weight: .semibold))
+                .foregroundStyle(isSelected ? Color(white: 0.15) : Color.secondary)
+                .frame(width: 38, height: 38)
+                .background(Circle().fill(isSelected ? Color.appTabSelected : Color(.systemGray6)))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var dayChips: [(number: Int, short: String)] {
+        let shorts = ["S", "M", "T", "W", "T", "F", "S"]
+        return (1...7).map { (number: $0, short: shorts[$0 - 1]) }
+    }
+}
+
+// MARK: - Add Time Entry Sheet
+
+private struct AddTimeEntrySheet: View {
+    let activity: Activity
+    let dataService: DataService
+
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var selectedDate: Date = Calendar.current.startOfDay(for: Date())
+    @State private var selectedHour: Int = 0
+    @State private var selectedMinute: Int = 0
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    private var minDate: Date {
+        Calendar.current.date(byAdding: .day, value: -30, to: Calendar.current.startOfDay(for: Date())) ?? Date()
+    }
+
+    private var totalSeconds: TimeInterval {
+        TimeInterval(selectedHour * 3600 + selectedMinute * 60)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.appBackground.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 14) {
+                        // Date picker card
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("DATE")
+                                .font(.system(.caption, design: .rounded, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                                .tracking(0.5)
+
+                            DatePicker(
+                                "Date",
+                                selection: $selectedDate,
+                                in: minDate...Calendar.current.startOfDay(for: Date()),
+                                displayedComponents: .date
+                            )
+                            .datePickerStyle(.graphical)
+                            .tint(Color.appAccent)
+                        }
+                        .padding(18)
+                        .appCard()
+
+                        // Duration picker card
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("DURATION")
+                                .font(.system(.caption, design: .rounded, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                                .tracking(0.5)
+
+                            HStack(spacing: 0) {
+                                Picker("Hours", selection: $selectedHour) {
+                                    ForEach(0...23, id: \.self) { h in
+                                        Text(h == 1 ? "1 hr" : "\(h) hrs").tag(h)
+                                    }
+                                }
+                                .pickerStyle(.wheel)
+                                .frame(maxWidth: .infinity)
+
+                                Picker("Minutes", selection: $selectedMinute) {
+                                    ForEach(0...59, id: \.self) { m in
+                                        Text(m == 1 ? "1 min" : "\(m) min").tag(m)
+                                    }
+                                }
+                                .pickerStyle(.wheel)
+                                .frame(maxWidth: .infinity)
+                            }
+                            .frame(height: 150)
+
+                            if totalSeconds > 0 {
+                                let h = Int(totalSeconds) / 3600
+                                let m = (Int(totalSeconds) % 3600) / 60
+                                let label = h > 0 && m > 0 ? "\(h)h \(m)m"
+                                    : h > 0 ? "\(h)h"
+                                    : "\(m)m"
+                                Text("Adding \(label) to \(activity.name)")
+                                    .font(.system(.subheadline, design: .rounded))
+                                    .foregroundStyle(Color.appAccent)
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding(.top, 4)
+                            }
+                        }
+                        .padding(18)
+                        .appCard()
+
+                        if let error = errorMessage {
+                            Text(error)
+                                .font(.system(.caption, design: .rounded))
+                                .foregroundStyle(.red)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 4)
                         }
                     }
-                ))
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 32)
+                }
+            }
+            .navigationTitle("Add Time Entry")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(.secondary)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    if isSaving {
+                        ProgressView().scaleEffect(0.8)
+                    } else {
+                        Button {
+                            Task { await save() }
+                        } label: {
+                            Text("Add")
+                                .font(.system(.body, design: .rounded, weight: .semibold))
+                                .foregroundStyle(totalSeconds > 0 ? Color.appAccent : Color.secondary)
+                        }
+                        .disabled(totalSeconds <= 0)
+                    }
+                }
             }
         }
     }
-    
-    // MARK: - Helpers
-    
-    private var daysOfWeek: [(number: Int, name: String)] {
-        let weekdaySymbols = Calendar.current.shortWeekdaySymbols
-        return (1...7).map { day in
-            let rawIndex = day - 1
-            let index = min(max(rawIndex, 0), weekdaySymbols.count - 1)
-            let name = index < weekdaySymbols.count ? weekdaySymbols[index] : "Day \(day)"
-            return (number: day, name: name)
+
+    private func save() async {
+        guard totalSeconds > 0 else {
+            errorMessage = "Please select a duration greater than 0"
+            return
+        }
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            try dataService.createOrUpdateTimeEntry(
+                activityID: activity.id,
+                date: selectedDate,
+                duration: totalSeconds
+            )
+            dismiss()
+        } catch {
+            errorMessage = "Failed to save: \(error.localizedDescription)"
         }
     }
-    
-    private func errorSection(_ errorMessage: String) -> some View {
-        Section {
-            Text(errorMessage)
-                .foregroundColor(.red)
-                .font(.caption)
+}
+
+// MARK: - Emoji Picker Sheet
+
+private struct EmojiPickerSheet: View {
+    @Binding var selectedEmoji: String
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var customInput: String = ""
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 7)
+
+    private let sections: [(title: String, emojis: [String])] = [
+        ("Sport & Health", ["🏃", "🧘", "💪", "🚴", "🏊", "🤸", "🏋️", "🎾", "⚽", "🧗", "🥊", "🏄"]),
+        ("Learning & Work", ["📚", "✍️", "💻", "🎓", "🔬", "📊", "💡", "🎯", "📝", "📖", "🗓️", "🧠"]),
+        ("Creative", ["🎨", "🎵", "📷", "🎬", "🖌️", "🎸", "🎹", "✂️", "🎭", "🎤", "🖊️", "🎲"]),
+        ("Lifestyle", ["☕", "🛌", "🍳", "🌿", "💊", "🥗", "🌱", "🧺", "🛁", "🧴", "🍵", "🥦"]),
+        ("Social & Fun", ["👥", "🎮", "💬", "🌍", "🎉", "🛍️", "📱", "🍕", "🎪", "🤝", "🎁", "🏡"]),
+        ("Mood & Nature", ["🌸", "🌞", "⭐", "🔥", "💫", "✨", "🌈", "🍀", "🦋", "🌙", "🌺", "🌻"])
+    ]
+
+    private var allPresetEmojis: [String] { sections.flatMap(\.emojis) }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    ForEach(sections, id: \.title) { section in
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(section.title)
+                                .font(.system(.caption, design: .rounded, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                                .tracking(0.4)
+                                .padding(.horizontal, 4)
+
+                            LazyVGrid(columns: columns, spacing: 8) {
+                                ForEach(section.emojis, id: \.self) { emoji in
+                                    Button {
+                                        selectedEmoji = emoji
+                                        dismiss()
+                                    } label: {
+                                        Text(emoji)
+                                            .font(.system(size: 28))
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: 48)
+                                            .background(
+                                                selectedEmoji == emoji
+                                                    ? Color.appTabSelected.opacity(0.35)
+                                                    : Color(.systemGray6)
+                                            )
+                                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
+
+                    customSection
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+            }
+            .background(Color.appBackground.ignoresSafeArea())
+            .navigationTitle("Choose Emoji")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        if !customInput.isEmpty {
+                            selectedEmoji = customInput
+                        }
+                        dismiss()
+                    }
+                    .font(.system(.body, design: .rounded, weight: .semibold))
+                    .foregroundStyle(Color.appAccent)
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    if !selectedEmoji.isEmpty {
+                        Button("Remove") {
+                            selectedEmoji = ""
+                            dismiss()
+                        }
+                        .font(.system(.body, design: .rounded))
+                        .foregroundStyle(.red)
+                    }
+                }
+            }
+            .onAppear {
+                if !selectedEmoji.isEmpty && !allPresetEmojis.contains(selectedEmoji) {
+                    customInput = selectedEmoji
+                }
+            }
         }
     }
+
+    // MARK: - Custom Section
+
+    private var customSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("CUSTOM")
+                .font(.system(.caption, design: .rounded, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .tracking(0.4)
+                .padding(.horizontal, 4)
+
+            HStack(spacing: 10) {
+                TextField("Type an emoji…", text: $customInput)
+                    .font(.system(size: 24))
+                    .frame(height: 48)
+                    .padding(.horizontal, 14)
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .onChange(of: customInput) { _, newValue in
+                        if let first = newValue.first {
+                            customInput = String(first)
+                        }
+                    }
+
+                if !customInput.isEmpty {
+                    Button {
+                        selectedEmoji = customInput
+                        dismiss()
+                    } label: {
+                        Text(customInput)
+                            .font(.system(size: 28))
+                            .frame(width: 56, height: 48)
+                            .background(
+                                selectedEmoji == customInput
+                                    ? Color.appTabSelected.opacity(0.35)
+                                    : Color.appAccent.opacity(0.1)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .strokeBorder(Color.appAccent.opacity(0.45), lineWidth: 1.5)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .animation(.spring(response: 0.25), value: customInput.isEmpty)
+
+            Text("Switch to the emoji keyboard (🌐) to enter any emoji")
+                .font(.system(.caption2, design: .rounded))
+                .foregroundStyle(Color.secondary.opacity(0.6))
+                .padding(.horizontal, 4)
+        }
+    }
+}
+
+#Preview("Create") {
+    let (container, dataService, _) = IOSViewPreviewSupport.dependencies(seedSample: false)
+    NavigationStack {
+        ActivityFormView(mode: .create, dataService: dataService)
+    }
+    .modelContainer(container)
+}
+
+#Preview("Edit") {
+    let (container, dataService, _) = IOSViewPreviewSupport.dependencies()
+    let activity = IOSViewPreviewSupport.firstActivity(in: container.mainContext)
+        ?? (try! Activity.validated(name: "Edit me", colorHex: "#FFC300", category: "Work", scheduledDays: [2, 3, 4, 5, 6]))
+    NavigationStack {
+        ActivityFormView(mode: .edit(activity), dataService: dataService)
+    }
+    .modelContainer(container)
 }
 
 private extension ActivityFormView.Mode {
     var title: String {
         switch self {
-        case .create:
-            return "New Activity"
-        case .edit:
-            return "Edit Activity"
+        case .create: return "New Activity"
+        case .edit:   return "Edit Activity"
         }
     }
 }

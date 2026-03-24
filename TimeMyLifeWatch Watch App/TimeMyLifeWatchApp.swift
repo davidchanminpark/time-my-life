@@ -44,21 +44,8 @@ struct TimeMyLifeWatch_Watch_AppApp: App {
                     Goal.self
                 ])
 
-                // Configure model container for local-only storage
-                // No CloudKit - will use WatchConnectivity for sync with iOS
-                // Note: If you see "CoreData: error: Recovery attempt... was successful!" in console,
-                // this is NOT an error - it means SwiftData automatically recovered from a database issue.
-                // This can happen if the app was force-quit during a write operation, but recovery is automatic.
-                let modelConfiguration = ModelConfiguration(
-                    schema: schema,
-                    isStoredInMemoryOnly: false
-                )
-
-                // Initialize ModelContainer with error handling
-                modelContainer = try ModelContainer(
-                    for: schema,
-                    configurations: [modelConfiguration]
-                )
+                // Same versioned store as iOS (see SwiftDataPersistence.swift).
+                modelContainer = try SwiftDataAppConfiguration.makeModelContainer(schema: schema)
 
                 // Initialize sync service
                 let sync = WatchConnectivitySyncService()

@@ -17,6 +17,10 @@ public class MainViewModel {
     /// List of activities to display (filtered by selected day)
     public var activities: [Activity] = []
 
+    /// Cached durations for the target date, keyed by activity ID
+    /// Stored as an @Observable property so SwiftUI tracks changes and re-renders automatically
+    public var durations: [UUID: TimeInterval] = [:]
+
     /// Current view mode (today or yesterday)
     public var viewMode: ViewMode = .today
 
@@ -90,6 +94,14 @@ public class MainViewModel {
             activities = []
             activities = fetchedActivities
 
+            // Refresh duration cache for the target date
+            var newDurations: [UUID: TimeInterval] = [:]
+            for activity in fetchedActivities {
+                let entries = try dataService.fetchTimeEntries(for: activity.id, on: targetDate)
+                newDurations[activity.id] = entries.first?.totalDuration ?? 0
+            }
+            durations = newDurations
+
             #if DEBUG
             print("🔄 MainViewModel: Loaded \(fetchedActivities.count) activities for weekday \(weekday)")
             #endif
@@ -149,19 +161,10 @@ public class MainViewModel {
         }
     }
 
-    /// Gets the duration for an activity on the target date
-    /// - Parameter activity: Activity to check
-    /// - Returns: Total duration in seconds
+    /// Gets the duration for an activity on the target date from the reactive cache.
+    /// The cache is populated in `loadActivities()` so SwiftUI tracks it via @Observable.
     public func durationForDate(activity: Activity) -> TimeInterval {
-        do {
-            let entries = try dataService.fetchTimeEntries(for: activity.id, on: targetDate)
-            return entries.first?.totalDuration ?? 0
-        } catch {
-            #if DEBUG
-            print("❌ MainViewModel: Failed to fetch duration: \(error)")
-            #endif
-            return 0
-        }
+        return durations[activity.id] ?? 0
     }
 
     /// Checks if a timer is running for the given activity on the target date

@@ -12,8 +12,6 @@ struct HomeView: View {
     @AppStorage("midnightModePreference") private var midnightModePreference: String = "unset"
     @AppStorage("lastMidnightPromptDate") private var lastMidnightPromptDate: String = ""
 
-    // MARK: - Initialization
-
     init(dataService: DataService, timerService: TimerService) {
         _viewModel = State(wrappedValue: MainViewModel(
             dataService: dataService,
@@ -38,154 +36,195 @@ struct HomeView: View {
         )
     }
 
+    private var greetingText: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<9:   return "Rise & thrive"
+        case 9..<12:  return "In your flow"
+        case 12..<15: return "Keep the momentum"
+        case 15..<18: return "Finish strong"
+        case 18..<22: return "Reflect & recharge"
+        default:      return "Night owl mode"
+        }
+    }
+
+    private var greetingEmoji: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<9:   return "✨"
+        case 9..<12:  return "⚡"
+        case 12..<15: return "🔥"
+        case 15..<18: return "💪"
+        case 18..<22: return "🌙"
+        default:      return "🦉"
+        }
+    }
+
+    private var formattedDate: String {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE, MMMM d"
+        return f.string(from: Date())
+    }
+
     // MARK: - Body
 
     var body: some View {
         NavigationStack {
-            mainContent
-                .navigationTitle(viewModel.viewMode.rawValue)
-                .toolbar {
-                    toolbarContent
+            ZStack {
+                Color.appBackground.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        greetingHeader
+                            .padding(.horizontal, 24)
+                            .padding(.top, 12)
+                            .padding(.bottom, 24)
+
+                        if shouldShowDayToggle {
+                            dayToggleView
+                                .padding(.horizontal, 24)
+                                .padding(.bottom, 20)
+                        }
+
+                        if viewModel.activities.isEmpty {
+                            emptyState
+                        } else {
+                            activitiesSection
+                                .padding(.horizontal, 20)
+                        }
+                    }
+                    .padding(.bottom, 110)
                 }
                 .refreshable {
                     await viewModel.loadActivities()
                 }
-                .modifier(AlertModifiers(
-                    showActivityLimitAlert: Binding(
-                        get: { viewModel.showActivityLimitAlert },
-                        set: { viewModel.showActivityLimitAlert = $0 }
-                    ),
-                    showMidnightPrompt: Binding(
-                        get: { viewModel.showMidnightPrompt },
-                        set: { viewModel.showMidnightPrompt = $0 }
-                    ),
-                    midnightModePreference: $midnightModePreference,
-                    lastMidnightPromptDate: $lastMidnightPromptDate,
-                    todayDateString: todayDateString
-                ))
-                .task {
+            }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { toolbarContent }
+            .modifier(AlertModifiers(
+                showActivityLimitAlert: Binding(
+                    get: { viewModel.showActivityLimitAlert },
+                    set: { viewModel.showActivityLimitAlert = $0 }
+                ),
+                showMidnightPrompt: Binding(
+                    get: { viewModel.showMidnightPrompt },
+                    set: { viewModel.showMidnightPrompt = $0 }
+                ),
+                midnightModePreference: $midnightModePreference,
+                lastMidnightPromptDate: $lastMidnightPromptDate,
+                todayDateString: todayDateString
+            ))
+            .onAppear {
+                Task {
                     await viewModel.loadActivities()
                     checkMidnightModePrompt()
                 }
+            }
         }
         .environment(viewModel.dataService)
         .environment(viewModel.timerService)
     }
 
-    // MARK: - View Components
+    // MARK: - Greeting Header
 
-    private var mainContent: some View {
-        VStack(spacing: 0) {
-            if shouldShowDayToggle {
-                dayToggleView
+    private var greetingHeader: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("\(greetingEmoji) \(greetingText)")
+                    .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                    .foregroundStyle(.primary)
+                Text(formattedDate)
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundStyle(.secondary)
             }
-            activitiesList
+            Spacer()
         }
     }
 
+    // MARK: - Day Toggle
+
     private var dayToggleView: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 8) {
             ForEach(MainViewModel.ViewMode.allCases, id: \.self) { mode in
                 dayToggleButton(for: mode)
             }
+            Spacer()
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color(.systemGray6))
     }
 
     private func dayToggleButton(for mode: MainViewModel.ViewMode) -> some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
+        let isSelected = viewModel.viewMode == mode
+        return Button {
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
                 viewModel.viewMode = mode
             }
-            Task {
-                await viewModel.loadActivities()
-            }
+            Task { await viewModel.loadActivities() }
         } label: {
-            dayToggleButtonLabel(for: mode)
+            Text(mode.rawValue)
+                .font(.system(.subheadline, design: .rounded, weight: isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected ? Color.white : Color.secondary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(isSelected ? Color.appAccent : Color(.systemGray5))
+                .clipShape(Capsule())
         }
         .buttonStyle(.plain)
     }
 
-    private func dayToggleButtonLabel(for mode: MainViewModel.ViewMode) -> some View {
-        let isSelected = viewModel.viewMode == mode
-        return Text(mode.rawValue)
-            .font(.subheadline)
-            .fontWeight(isSelected ? .semibold : .regular)
-            .foregroundColor(isSelected ? .white : .secondary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(isSelected ? Color.blue : Color.clear)
-            )
-    }
+    // MARK: - Activities Section
 
-    private var activitiesList: some View {
-        List {
-            if viewModel.activities.isEmpty {
-                ContentUnavailableView(
-                    "No Activities \(viewModel.viewMode == .today ? "Today" : "Yesterday")",
-                    systemImage: "calendar.badge.clock",
-                    description: Text("Add activities using the + button")
-                )
-            } else {
-                ForEach(viewModel.activities) { activity in
-                    NavigationLink {
-                        ActivityTimerView(
-                            activity: activity,
-                            targetDate: viewModel.targetDate,
-                            dataService: viewModel.dataService,
-                            timerService: viewModel.timerService
-                        )
-                    } label: {
-                        ActivityRowView(
-                            activity: activity,
-                            displayedDuration: viewModel.durationForDate(activity: activity),
-                            isTimerRunning: viewModel.isTimerRunning(for: activity),
-                            targetDate: viewModel.targetDate
-                        )
-                    }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button(role: .destructive) {
-                            Task {
-                                await deleteActivity(activity)
-                            }
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-
-                        Button {
-                            // TODO: Navigate to edit
-                        } label: {
-                            Label("Edit", systemImage: "pencil")
-                        }
-                        .tint(.blue)
-                    }
+    private var activitiesSection: some View {
+        LazyVStack(spacing: 12) {
+            ForEach(viewModel.activities) { activity in
+                NavigationLink {
+                    ActivityTimerView(
+                        activity: activity,
+                        targetDate: viewModel.targetDate,
+                        dataService: viewModel.dataService,
+                        timerService: viewModel.timerService
+                    )
+                } label: {
+                    ActivityRowView(
+                        activity: activity,
+                        displayedDuration: viewModel.durationForDate(activity: activity),
+                        isTimerRunning: viewModel.isTimerRunning(for: activity),
+                        targetDate: viewModel.targetDate
+                    )
                 }
+                .buttonStyle(.plain)
             }
         }
-        .listStyle(.plain)
-        .id(viewModel.refreshTrigger) // Force refresh when trigger changes
     }
+
+    // MARK: - Empty State
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Text("✨")
+                .font(.system(size: 52))
+            VStack(spacing: 6) {
+                Text("No activities yet")
+                    .font(.system(.headline, design: .rounded, weight: .semibold))
+                Text("Tap + to add your first activity")
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 80)
+    }
+
+    // MARK: - Toolbar
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            NavigationLink {
-                SettingsView(dataService: viewModel.dataService)
-            } label: {
-                Image(systemName: "gearshape.fill")
-            }
-        }
-
         ToolbarItem(placement: .topBarTrailing) {
             if viewModel.isActivityLimitReached() {
                 Button {
                     viewModel.showActivityLimitAlert = true
                 } label: {
-                    Image(systemName: "plus")
+                    addButtonLabel
                 }
             } else {
                 NavigationLink {
@@ -194,13 +233,19 @@ struct HomeView: View {
                         dataService: viewModel.dataService
                     )
                 } label: {
-                    Image(systemName: "plus")
+                    addButtonLabel
                 }
             }
         }
     }
 
-    // MARK: - Helper Functions
+    private var addButtonLabel: some View {
+        Image(systemName: "plus")
+            .font(.system(size: 17, weight: .bold))
+            .foregroundStyle(Color.appAccent)
+    }
+
+    // MARK: - Helpers
 
     private func checkMidnightModePrompt() {
         if viewModel.shouldShowMidnightPrompt(
@@ -211,15 +256,27 @@ struct HomeView: View {
             viewModel.showMidnightPrompt = true
         }
     }
+}
 
-    private func deleteActivity(_ activity: Activity) async {
-        do {
-            try viewModel.dataService.deleteActivity(activity)
-            await viewModel.loadActivities()
-        } catch {
-            print("Error deleting activity: \(error)")
-        }
+// Home tab only (no bottom bar — that lives in `ContentView` / `IOSPreviewFullAppShell`).
+#Preview("Home — sample data") {
+    let (container, dataService, timerService) = IOSViewPreviewSupport.dependencies()
+    NavigationStack {
+        HomeView(dataService: dataService, timerService: timerService)
     }
+    .modelContainer(container)
+}
+
+#Preview("Home — empty") {
+    let (container, dataService, timerService) = IOSViewPreviewSupport.dependencies(seedSample: false)
+    NavigationStack {
+        HomeView(dataService: dataService, timerService: timerService)
+    }
+    .modelContainer(container)
+}
+
+#Preview("Full app — floating tab bar") {
+    IOSPreviewFullAppShell()
 }
 
 // MARK: - Alert Modifiers

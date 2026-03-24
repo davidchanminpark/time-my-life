@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ActivityTimerView: View {
     let activity: Activity
@@ -26,76 +27,96 @@ struct ActivityTimerView: View {
     }
 
     var body: some View {
-        VStack(spacing: 32) {
-            Spacer()
+        ZStack {
+            Color.appBackground.ignoresSafeArea()
 
-            // Activity info
-            VStack(spacing: 12) {
-                Circle()
-                    .fill(activity.color())
-                    .frame(width: 80, height: 80)
-                    .overlay(
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: 36))
-                            .foregroundColor(.white)
-                    )
+            VStack(spacing: 0) {
+                Spacer()
 
-                Text(activity.name)
-                    .font(.title2)
-                    .fontWeight(.bold)
+                // Avatar + name
+                VStack(spacing: 16) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 26)
+                            .fill(activity.emoji.isEmpty
+                                  ? activity.color()
+                                  : activity.color().opacity(0.18))
+                            .frame(width: 100, height: 100)
+                            .shadow(
+                                color: activity.color().opacity(0.45),
+                                radius: 24,
+                                x: 0, y: 10
+                            )
+                        if activity.emoji.isEmpty {
+                            Text(String(activity.name.prefix(1)).uppercased())
+                                .font(.system(size: 44, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color(white: 0.18))
+                        } else {
+                            Text(activity.emoji)
+                                .font(.system(size: 52))
+                        }
+                    }
 
-                if !activity.category.isEmpty {
-                    Text(activity.category)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                    VStack(spacing: 6) {
+                        Text(activity.name)
+                            .font(.system(.title2, design: .rounded, weight: .bold))
+                            .foregroundStyle(.primary)
+
+                        if !activity.category.isEmpty {
+                            Text(activity.category)
+                                .font(.system(.subheadline, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 5)
+                                .background(Color(.systemGray6))
+                                .clipShape(Capsule())
+                        }
+                    }
                 }
-            }
 
-            Spacer()
+                Spacer()
 
-            // Timer display
-            Text(viewModel.displayedElapsedTime.formattedAsHoursMinutes())
-                .font(.system(size: 56, weight: .medium, design: .rounded))
-                .monospacedDigit()
+                // Timer display
+                Text(viewModel.displayedElapsedTime.formattedAsHoursMinutes())
+                    .font(.system(size: 64, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(viewModel.isRunning ? Color.appAccent : .primary)
+                    .contentTransition(.numericText())
 
-            Spacer()
+                Spacer()
 
-            // Control buttons
-            HStack(spacing: 24) {
-                if viewModel.isRunning {
-                    Button {
-                        Task {
+                // Control button
+                Button {
+                    Task {
+                        if viewModel.isRunning {
                             await viewModel.stopTimer()
                             dismiss()
-                        }
-                    } label: {
-                        Label("Stop", systemImage: "stop.fill")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.red)
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                    }
-                } else {
-                    Button {
-                        Task {
+                        } else {
                             await viewModel.startTimer()
                         }
-                    } label: {
-                        Label("Start", systemImage: "play.fill")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.green)
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
                     }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: viewModel.isRunning ? "stop.fill" : "play.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text(viewModel.isRunning ? "Stop" : "Start")
+                            .font(.system(.headline, design: .rounded, weight: .semibold))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(viewModel.isRunning ? Color(red: 0.91, green: 0.42, blue: 0.42) : Color.appAccent)
+                    .clipShape(Capsule())
+                    .shadow(
+                        color: (viewModel.isRunning
+                            ? Color(red: 0.91, green: 0.42, blue: 0.42)
+                            : Color.appAccent).opacity(0.35),
+                        radius: 14, x: 0, y: 5
+                    )
                 }
-            }
-            .padding(.horizontal, 24)
+                .padding(.horizontal, 32)
 
-            Spacer()
+                Spacer()
+            }
         }
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -103,4 +124,19 @@ struct ActivityTimerView: View {
             viewModel.checkAndResumeTimer()
         }
     }
+}
+
+#Preview {
+    let (container, dataService, timerService) = IOSViewPreviewSupport.dependencies()
+    let activity = IOSViewPreviewSupport.firstActivity(in: container.mainContext)
+        ?? (try! Activity.validated(name: "Preview", colorHex: "#BFC8FF", category: "", scheduledDays: [2]))
+    NavigationStack {
+        ActivityTimerView(
+            activity: activity,
+            targetDate: Calendar.current.startOfDay(for: Date()),
+            dataService: dataService,
+            timerService: timerService
+        )
+    }
+    .modelContainer(container)
 }

@@ -39,7 +39,10 @@ public class ActivityFormViewModel {
     public var category: String = ""
 
     /// Selected color hex value
-    public var selectedColorHex: String = "#BFC8FF"
+    public var selectedColorHex: String = "#D4BAFF"
+
+    /// Selected emoji icon (empty string = no emoji)
+    public var emoji: String = ""
 
     /// Selected weekdays (1=Sunday, 2=Monday, ..., 7=Saturday)
     public var selectedDays: Set<Int> = []
@@ -77,6 +80,7 @@ public class ActivityFormViewModel {
             name = activity.name
             category = activity.category
             selectedColorHex = activity.colorHex
+            emoji = activity.emoji
             selectedDays = Set(activity.scheduledDayInts)
         }
     }
@@ -199,6 +203,7 @@ public class ActivityFormViewModel {
                     name: trimmedName,
                     colorHex: selectedColorHex,
                     category: trimmedCategory.isEmpty ? "Uncategorized" : trimmedCategory,
+                    emoji: emoji,
                     scheduledDays: Array(selectedDays)
                 )
                 
@@ -226,6 +231,7 @@ public class ActivityFormViewModel {
                 activity.name = trimmedName
                 activity.colorHex = selectedColorHex
                 activity.category = trimmedCategory.isEmpty ? "Uncategorized" : trimmedCategory
+                activity.emoji = emoji
                 
                 // Update scheduled days - remove old ones and create new ones
                 // Delete old scheduled days

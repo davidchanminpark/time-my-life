@@ -51,6 +51,9 @@ public final class Activity {
     /// Category/tag for grouping activities (e.g., "music", "social", "reading")
     public var category: String
 
+    /// Optional emoji icon for the activity (e.g., "📚", "🏃")
+    public var emoji: String
+
     /// Array of scheduled days (relationship-based to avoid SwiftData reflection metadata issues)
     @Relationship(deleteRule: .cascade, inverse: \ScheduledDay.activity)
     public var scheduledDays: [ScheduledDay]
@@ -67,6 +70,7 @@ public final class Activity {
         name: String,
         colorHex: String,
         category: String,
+        emoji: String = "",
         scheduledDays: [Int],
         createdAt: Date = Date()
     ) {
@@ -74,6 +78,7 @@ public final class Activity {
         self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         self.colorHex = Self.normalizeHex(colorHex)
         self.category = category.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.emoji = emoji
         self.createdAt = createdAt
         
         // Convert [Int] to [ScheduledDay] for SwiftData relationship
@@ -95,6 +100,7 @@ public final class Activity {
         name: String,
         colorHex: String,
         category: String,
+        emoji: String = "",
         scheduledDays: [Int],
         createdAt: Date = Date()
     ) throws -> Activity {
@@ -135,6 +141,7 @@ public final class Activity {
             name: trimmedName,
             colorHex: normalizedHex,
             category: trimmedCategory,
+            emoji: emoji,
             scheduledDays: uniqueDays,
             createdAt: createdAt
         )
@@ -223,6 +230,7 @@ extension Activity: Codable {
         case name
         case colorHex
         case category
+        case emoji
         case scheduledDays
         case createdAt
     }
@@ -233,6 +241,7 @@ extension Activity: Codable {
         try container.encode(name, forKey: .name)
         try container.encode(colorHex, forKey: .colorHex)
         try container.encode(category, forKey: .category)
+        try container.encode(emoji, forKey: .emoji)
         // Encode scheduledDays as array of integers for syncing
         try container.encode(scheduledDayInts, forKey: .scheduledDays)
         try container.encode(createdAt, forKey: .createdAt)
@@ -244,15 +253,16 @@ extension Activity: Codable {
         let name = try container.decode(String.self, forKey: .name)
         let colorHex = try container.decode(String.self, forKey: .colorHex)
         let category = try container.decode(String.self, forKey: .category)
+        let emoji = (try? container.decodeIfPresent(String.self, forKey: .emoji)) ?? ""
         let scheduledDays = try container.decode([Int].self, forKey: .scheduledDays)
         let createdAt = try container.decode(Date.self, forKey: .createdAt)
-        
-        // Use the standard initializer which handles ScheduledDay relationship
+
         self.init(
             id: id,
             name: name,
             colorHex: colorHex,
             category: category,
+            emoji: emoji ?? "",
             scheduledDays: scheduledDays,
             createdAt: createdAt
         )

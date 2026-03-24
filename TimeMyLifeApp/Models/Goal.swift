@@ -61,3 +61,39 @@ public final class Goal {
     /// Current streak is calculated from historical TimeEntry data
     /// This should be computed in the ViewModel, not stored in the model
 }
+
+// MARK: - Codable Conformance for Syncing
+
+extension Goal: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case id, activityID, frequency, targetSeconds, isActive, createdDate
+    }
+
+    public convenience init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let id = try container.decode(UUID.self, forKey: .id)
+        let activityID = try container.decode(UUID.self, forKey: .activityID)
+        let frequency = try container.decode(GoalFrequency.self, forKey: .frequency)
+        let targetSeconds = try container.decode(Int.self, forKey: .targetSeconds)
+        let isActive = try container.decode(Bool.self, forKey: .isActive)
+        let createdDate = try container.decode(Date.self, forKey: .createdDate)
+        self.init(
+            id: id,
+            activityID: activityID,
+            frequency: frequency,
+            targetSeconds: targetSeconds,
+            isActive: isActive,
+            createdDate: createdDate
+        )
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(activityID, forKey: .activityID)
+        try container.encode(frequency, forKey: .frequency)
+        try container.encode(targetSeconds, forKey: .targetSeconds)
+        try container.encode(isActive, forKey: .isActive)
+        try container.encode(createdDate, forKey: .createdDate)
+    }
+}

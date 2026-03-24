@@ -7,16 +7,42 @@ import Foundation
 
 /// Shared helper functions for activity form validation and formatting
 public enum ActivityFormHelpers {
+    #if os(iOS)
     public static let availableColors: [(hex: String, name: String)] = [
-        // Pastel colors
+        // Rainbow-ordered pastel palette (iOS expanded)
+        ("#FFADAD", "Red"),
+        ("#FFB3BA", "Coral"),
+        ("#FFB38A", "Salmon"),
+        ("#FFC8A2", "Light Salmon"),
+        ("#FFD6A5", "Peach"),
+        ("#FFE8A1", "Butter"),
+        ("#FDFFB6", "Yellow"),
+        ("#E8F5AD", "Lime"),
+        ("#CAFFBF", "Mint"),
+        ("#C9E4CA", "Sage"),
+        ("#B5EAD7", "Seafoam"),
+        ("#9BE7D5", "Teal"),
+        ("#BAE1FF", "Sky Blue"),
+        ("#AED6F7", "Light Blue"),
+        ("#BFC8FF", "Periwinkle"),
+        ("#C3B4F7", "Blue Violet"),
+        ("#D4BAFF", "Lavender"),
+        ("#E8B8FF", "Light Purple"),
+        ("#FFBCEE", "Pink Purple"),
+        ("#FFCCE1", "Pink"),
+    ]
+    #else
+    public static let availableColors: [(hex: String, name: String)] = [
+        // Compact pastel set (watchOS — readable at small sizes)
         ("#BFC8FF", "Blue"),
         ("#D4BAFF", "Lavender"),
         ("#FFCCE1", "Pink"),
         ("#BAE1FF", "Sky Blue"),
         ("#FFB3BA", "Coral"),
         ("#C9E4CA", "Sage"),
-        ("#FFD6A5", "Peach")
+        ("#FFD6A5", "Peach"),
     ]
+    #endif
 
     public static func colorName(for hex: String) -> String {
         availableColors.first(where: { $0.hex == hex })?.name ?? "Blue"

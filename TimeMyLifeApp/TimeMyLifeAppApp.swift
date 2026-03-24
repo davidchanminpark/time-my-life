@@ -44,18 +44,9 @@ struct TimeMyLifeAppApp: App {
                 Goal.self
             ])
 
-            // Configure model container for local-only storage
-            // No CloudKit - will use WatchConnectivity for sync
-            let modelConfiguration = ModelConfiguration(
-                schema: schema,
-                isStoredInMemoryOnly: false
-            )
-
-            // Initialize ModelContainer with error handling
-            modelContainer = try ModelContainer(
-                for: schema,
-                configurations: [modelConfiguration]
-            )
+            // Versioned store name avoids `loadIssueModelContainer` when an old default store
+            // on disk doesn't match the current schema (see SwiftDataPersistence.swift).
+            modelContainer = try SwiftDataAppConfiguration.makeModelContainer(schema: schema)
 
             // Initialize sync service
             let sync = WatchConnectivitySyncService()
