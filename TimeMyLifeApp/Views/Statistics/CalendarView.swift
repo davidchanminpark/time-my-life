@@ -55,7 +55,7 @@ struct CalendarView: View {
                 Image(systemName: "chevron.left")
                     .font(.system(.subheadline, design: .rounded, weight: .semibold))
                     .frame(width: 36, height: 36)
-                    .background(Color.white)
+                    .background(Color.appCardBackground)
                     .clipShape(Circle())
                     .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 2)
             }
@@ -76,7 +76,7 @@ struct CalendarView: View {
                 Image(systemName: "chevron.right")
                     .font(.system(.subheadline, design: .rounded, weight: .semibold))
                     .frame(width: 36, height: 36)
-                    .background(Color.white)
+                    .background(Color.appCardBackground)
                     .clipShape(Circle())
                     .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 2)
             }
@@ -113,7 +113,7 @@ struct CalendarView: View {
             }
         }
         .padding(8)
-        .background(Color.white)
+        .background(Color.appCardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 18))
         .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 3)
     }

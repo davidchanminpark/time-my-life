@@ -166,7 +166,7 @@ struct GoalsView: View {
             .foregroundStyle(Color.appAccent)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(Color.white)
+            .background(Color.appCardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 18))
             .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 3)
         }

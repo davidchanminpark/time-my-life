@@ -89,7 +89,7 @@ private struct FloatingTabBar: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
-        .background(Color.white)
+        .background(Color.appCardBackground)
         .clipShape(Capsule())
         .shadow(color: .black.opacity(0.10), radius: 22, x: 0, y: 5)
         .padding(.horizontal, 32)
