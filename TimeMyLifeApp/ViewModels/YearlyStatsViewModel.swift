@@ -117,10 +117,11 @@ class YearlyStatsViewModel {
                 .prefix(5)
                 .map { $0 }
 
-            // Longest streak per activity this year
+            // Longest streak per activity this year — reuse already-fetched entries (no extra DB queries)
             var streaks: [ActivityStreak] = []
             for act in activities where activityTotals[act.id] != nil {
-                let s = try longestStreak(activityID: act.id, yearStart: yearStart, yearEnd: yearEnd)
+                let actEntries = entries.filter { $0.activityID == act.id }
+                let s = longestStreak(from: actEntries, yearStart: yearStart, yearEnd: yearEnd)
                 if s > 0 { streaks.append(ActivityStreak(activity: act, longestStreak: s)) }
             }
             activityStreaks = Array(streaks.sorted { $0.longestStreak > $1.longestStreak }.prefix(5))
@@ -132,8 +133,9 @@ class YearlyStatsViewModel {
 
     // MARK: - Streak Calculation
 
-    private func longestStreak(activityID: UUID, yearStart: Date, yearEnd: Date) throws -> Int {
-        let entries = try dataService.fetchTimeEntries(for: activityID, from: yearStart, to: yearEnd)
+    /// Computes the longest consecutive-day streak from a pre-fetched slice of entries.
+    /// No DB access — caller passes the already-filtered entries for this activity.
+    private func longestStreak(from entries: [TimeEntry], yearStart: Date, yearEnd: Date) -> Int {
         let trackedSet = Set(entries.filter { $0.totalDuration > 0 }.map { $0.date })
 
         let daysInYear = cal.dateComponents([.day], from: yearStart, to: yearEnd).day ?? 365

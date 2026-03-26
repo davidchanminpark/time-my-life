@@ -133,25 +133,30 @@ class GoalsViewModel {
         today: Date
     ) throws -> (streak: Int, history: [Bool]) {
         let cal = Calendar.current
-        var history: [Bool] = []
+
+        // Batch fetch 90 days of entries (1 query instead of up to 96 per goal)
+        let lookbackStart = cal.date(byAdding: .day, value: -90, to: today) ?? today
+        let entries = try dataService.fetchTimeEntries(for: activityID, from: lookbackStart, to: today)
+        let durationByDate: [Date: TimeInterval] = Dictionary(
+            entries.map { ($0.date, $0.totalDuration) },
+            uniquingKeysWith: { max($0, $1) }
+        )
 
         // Build last-6-days history (oldest → newest)
+        var history: [Bool] = []
         for offset in stride(from: 5, through: 0, by: -1) {
             guard let date = cal.date(byAdding: .day, value: -offset, to: today) else { continue }
-            let duration = (try? dailyProgress(activityID: activityID, date: date)) ?? 0
-            history.append(duration >= target)
+            history.append((durationByDate[date] ?? 0) >= target)
         }
 
         // Calculate streak: consecutive days ending with the most recent met day
         var streak = 0
-        let todayDuration = (try? dailyProgress(activityID: activityID, date: today)) ?? 0
-        let todayMet = todayDuration >= target
+        let todayMet = (durationByDate[today] ?? 0) >= target
         let startOffset = todayMet ? 0 : 1
 
         for offset in startOffset..<90 {
             guard let date = cal.date(byAdding: .day, value: -offset, to: today) else { break }
-            let duration = (try? dailyProgress(activityID: activityID, date: date)) ?? 0
-            if duration >= target {
+            if (durationByDate[date] ?? 0) >= target {
                 streak += 1
             } else {
                 break
@@ -175,29 +180,38 @@ class GoalsViewModel {
         target: TimeInterval,
         today: Date
     ) throws -> (streak: Int, history: [Bool]) {
-        var history: [Bool] = []
         let cal = Calendar.current
 
+        // Batch fetch 52 weeks of entries (1 query instead of up to 58 per goal)
+        let lookbackStart = cal.date(byAdding: .weekOfYear, value: -52, to: today) ?? today
+        let entries = try dataService.fetchTimeEntries(for: activityID, from: lookbackStart, to: today)
+
+        // In-memory weekly total using pre-fetched entries
+        func weekTotal(for weekStart: Date) -> TimeInterval {
+            let weekEnd = cal.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
+            return entries
+                .filter { $0.date >= weekStart && $0.date <= weekEnd }
+                .reduce(0) { $0 + $1.totalDuration }
+        }
+
         // Build last-6-weeks history (oldest → newest)
+        var history: [Bool] = []
         for offset in stride(from: 5, through: 0, by: -1) {
             guard let weekDate = cal.date(byAdding: .weekOfYear, value: -offset, to: today) else { continue }
             let weekStart = currentWeekStart(for: weekDate)
-            let total = (try? weeklyProgress(activityID: activityID, weekStart: weekStart)) ?? 0
-            history.append(total >= target)
+            history.append(weekTotal(for: weekStart) >= target)
         }
 
         // Calculate streak: consecutive weeks ending with the most recent met week
         var streak = 0
         let thisWeekStart = currentWeekStart(for: today)
-        let thisWeekTotal = (try? weeklyProgress(activityID: activityID, weekStart: thisWeekStart)) ?? 0
-        let thisWeekMet = thisWeekTotal >= target
+        let thisWeekMet = weekTotal(for: thisWeekStart) >= target
         let startOffset = thisWeekMet ? 0 : 1
 
         for offset in startOffset..<52 {
             guard let weekDate = cal.date(byAdding: .weekOfYear, value: -offset, to: today) else { break }
             let weekStart = currentWeekStart(for: weekDate)
-            let total = (try? weeklyProgress(activityID: activityID, weekStart: weekStart)) ?? 0
-            if total >= target {
+            if weekTotal(for: weekStart) >= target {
                 streak += 1
             } else {
                 break
