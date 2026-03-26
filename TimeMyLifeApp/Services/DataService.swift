@@ -348,17 +348,19 @@ public class DataService {
         let cal = Calendar.current
         let currentYear = cal.component(.year, from: Date())
         var startYear = currentYear
-        
-        let entryDescriptor = FetchDescriptor<TimeEntry>(sortBy: [SortDescriptor(\.date, order: .forward)])
+
+        var entryDescriptor = FetchDescriptor<TimeEntry>(sortBy: [SortDescriptor(\.date, order: .forward)])
+        entryDescriptor.fetchLimit = 1
         if let firstEntry = try modelContext.fetch(entryDescriptor).first {
             startYear = min(startYear, cal.component(.year, from: firstEntry.date))
         }
-        
-        let activityDescriptor = FetchDescriptor<Activity>(sortBy: [SortDescriptor(\.createdAt, order: .forward)])
+
+        var activityDescriptor = FetchDescriptor<Activity>(sortBy: [SortDescriptor(\.createdAt, order: .forward)])
+        activityDescriptor.fetchLimit = 1
         if let firstActivity = try modelContext.fetch(activityDescriptor).first {
             startYear = min(startYear, cal.component(.year, from: firstActivity.createdAt))
         }
-        
+
         if startYear > currentYear { startYear = currentYear }
         return Array(startYear...currentYear)
     }

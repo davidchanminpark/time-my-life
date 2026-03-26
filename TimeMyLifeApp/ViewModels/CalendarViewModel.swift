@@ -96,18 +96,12 @@ class CalendarViewModel {
         isLoading = true
         defer { isLoading = false }
 
-        do {
-            let earliest = try dataService.earliestCalendarDisplayMonthStart()
-            earliestNavigableMonth = earliest
-            let latest = latestNavigableMonth
-            if cal.compare(displayedMonth, to: earliest, toGranularity: .month) == .orderedAscending {
-                displayedMonth = earliest
-            }
-            if cal.compare(displayedMonth, to: latest, toGranularity: .month) == .orderedDescending {
-                displayedMonth = latest
-            }
-        } catch {
-            print("CalendarViewModel bounds error: \(error)")
+        let latest = latestNavigableMonth
+        if cal.compare(displayedMonth, to: earliestNavigableMonth, toGranularity: .month) == .orderedAscending {
+            displayedMonth = earliestNavigableMonth
+        }
+        if cal.compare(displayedMonth, to: latest, toGranularity: .month) == .orderedDescending {
+            displayedMonth = latest
         }
 
         guard let interval = cal.dateInterval(of: .month, for: displayedMonth) else { return }

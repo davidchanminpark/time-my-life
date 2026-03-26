@@ -31,15 +31,16 @@ final class PerformanceTests: XCTestCase {
     // MARK: - Large Dataset Seeding
 
     /// Seeds 20 activities × 365 daily entries = 7,300 time entries.
+    /// Bypasses createOrUpdateTimeEntry to avoid 7,300 individual saves — inserts directly then saves once.
     private func seedLargeDataset(year: Int) throws -> [Activity] {
         guard
             let yearStart = cal.date(from: DateComponents(year: year, month: 1, day: 1))
         else { return [] }
 
-        var activities: [Activity] = []
         let colors = ["#BFC8FF", "#D4BAFF", "#FFCCE1", "#BAE1FF", "#FFB3BA",
                       "#C9E4CA", "#FFD6A5", "#CAFFBF", "#AED6F7", "#FDFFB6"]
 
+        var activities: [Activity] = []
         for i in 0..<20 {
             let a = Activity(
                 name: "Activity \(i + 1)",
@@ -47,16 +48,19 @@ final class PerformanceTests: XCTestCase {
                 category: "Category \(i % 5)",
                 scheduledDays: [1, 2, 3, 4, 5, 6, 7]
             )
-            try dataService.createActivity(a)
+            dataService.modelContext.insert(a)
             activities.append(a)
 
-            // 365 entries — one per day of the year with varying durations
             for d in 0..<365 {
                 guard let date = cal.date(byAdding: .day, value: d, to: yearStart) else { continue }
+                let normalizedDate = cal.startOfDay(for: date)
                 let duration = TimeInterval((d % 4 + 1) * 900) // 15–60 min cycles
-                try dataService.createOrUpdateTimeEntry(activityID: a.id, date: date, duration: duration)
+                let entry = TimeEntry(activityID: a.id, date: normalizedDate, totalDuration: duration)
+                dataService.modelContext.insert(entry)
             }
         }
+        // Single save for all 7,320 inserts instead of 7,300 individual saves
+        try dataService.modelContext.save()
         return activities
     }
 

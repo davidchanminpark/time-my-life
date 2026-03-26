@@ -83,8 +83,7 @@ class ActivityStatsViewModel {
             let shortest = nonZero.map { $0.totalDuration }.min() ?? 0
 
             // Goal completion: % of last-30 days where daily goal was met
-            let goals = try dataService.fetchGoals(frequency: .daily)
-            let activityGoal = goals.first { $0.activityID == activity.id }
+            let activityGoal = try dataService.fetchGoal(activityID: activity.id, frequency: .daily)
             var goalPct: Double? = nil
             if let goal = activityGoal {
                 let target = TimeInterval(goal.targetSeconds)

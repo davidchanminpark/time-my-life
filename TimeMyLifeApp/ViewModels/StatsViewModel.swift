@@ -60,19 +60,13 @@ class StatsViewModel {
     }
 
     var activityStats: [ActivityStat] = []
-    var stackedBarSegments: [StackedBarSegment] = []
+    var stackedBarSegments: [StackedBarSegment] = [] {
+        didSet { updateMaxStackedBarHours() }
+    }
+    private(set) var maxStackedBarHours: Double = 0
     var totalHours: Double = 0
     var trackedDays: Int = 0
     var isLoading = false
-
-    /// Peak total hours in any single stacked bar (same `periodStart`).
-    var maxStackedBarHours: Double {
-        var sums: [Date: Double] = [:]
-        for seg in stackedBarSegments {
-            sums[seg.periodStart, default: 0] += seg.hours
-        }
-        return sums.values.max() ?? 0
-    }
 
     /// Daily chart only: use minute labels on the Y axis when the tallest day is under 2 hours.
     var useMinuteAxisForDailyBarChart: Bool {
@@ -166,6 +160,14 @@ class StatsViewModel {
     }
 
     // MARK: - Bar Chart Data
+
+    private func updateMaxStackedBarHours() {
+        var sums: [Date: Double] = [:]
+        for seg in stackedBarSegments {
+            sums[seg.periodStart, default: 0] += seg.hours
+        }
+        maxStackedBarHours = sums.values.max() ?? 0
+    }
 
     private func weekStart(for date: Date, cal: Calendar) -> Date {
         let weekday = cal.component(.weekday, from: date)   // 1=Sun

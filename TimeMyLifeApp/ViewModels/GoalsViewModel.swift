@@ -186,12 +186,11 @@ class GoalsViewModel {
         let lookbackStart = cal.date(byAdding: .weekOfYear, value: -52, to: today) ?? today
         let entries = try dataService.fetchTimeEntries(for: activityID, from: lookbackStart, to: today)
 
-        // In-memory weekly total using pre-fetched entries
-        func weekTotal(for weekStart: Date) -> TimeInterval {
-            let weekEnd = cal.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
-            return entries
-                .filter { $0.date >= weekStart && $0.date <= weekEnd }
-                .reduce(0) { $0 + $1.totalDuration }
+        // Pre-build [weekStart: total] dictionary — O(N) once instead of O(N) × 58
+        var weekTotals: [Date: TimeInterval] = [:]
+        for entry in entries {
+            let ws = currentWeekStart(for: entry.date)
+            weekTotals[ws, default: 0] += entry.totalDuration
         }
 
         // Build last-6-weeks history (oldest → newest)
@@ -199,19 +198,19 @@ class GoalsViewModel {
         for offset in stride(from: 5, through: 0, by: -1) {
             guard let weekDate = cal.date(byAdding: .weekOfYear, value: -offset, to: today) else { continue }
             let weekStart = currentWeekStart(for: weekDate)
-            history.append(weekTotal(for: weekStart) >= target)
+            history.append((weekTotals[weekStart] ?? 0) >= target)
         }
 
         // Calculate streak: consecutive weeks ending with the most recent met week
         var streak = 0
         let thisWeekStart = currentWeekStart(for: today)
-        let thisWeekMet = weekTotal(for: thisWeekStart) >= target
+        let thisWeekMet = (weekTotals[thisWeekStart] ?? 0) >= target
         let startOffset = thisWeekMet ? 0 : 1
 
         for offset in startOffset..<52 {
             guard let weekDate = cal.date(byAdding: .weekOfYear, value: -offset, to: today) else { break }
             let weekStart = currentWeekStart(for: weekDate)
-            if weekTotal(for: weekStart) >= target {
+            if (weekTotals[weekStart] ?? 0) >= target {
                 streak += 1
             } else {
                 break

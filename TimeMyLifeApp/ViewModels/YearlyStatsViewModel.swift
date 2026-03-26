@@ -92,6 +92,7 @@ class YearlyStatsViewModel {
             var activityTotals: [UUID: Double] = [:]
             var dailyTotals: [Date: Double] = [:]
             var monthly: [Double] = Array(repeating: 0, count: 12)
+            var entriesByActivity: [UUID: [TimeEntry]] = [:]
 
             for entry in entries where entry.totalDuration > 0 {
                 let h = entry.totalDuration / 3600
@@ -99,6 +100,7 @@ class YearlyStatsViewModel {
                 dailyTotals[entry.date, default: 0] += h
                 let month = cal.component(.month, from: entry.date) - 1   // 0-based
                 monthly[month] += h
+                entriesByActivity[entry.activityID, default: []].append(entry)
             }
 
             totalHours = activityTotals.values.reduce(0, +)
@@ -117,10 +119,10 @@ class YearlyStatsViewModel {
                 .prefix(5)
                 .map { $0 }
 
-            // Longest streak per activity this year — reuse already-fetched entries (no extra DB queries)
+            // Longest streak per activity this year — use pre-grouped dict (no extra scans)
             var streaks: [ActivityStreak] = []
             for act in activities where activityTotals[act.id] != nil {
-                let actEntries = entries.filter { $0.activityID == act.id }
+                let actEntries = entriesByActivity[act.id] ?? []
                 let s = longestStreak(from: actEntries, yearStart: yearStart, yearEnd: yearEnd)
                 if s > 0 { streaks.append(ActivityStreak(activity: act, longestStreak: s)) }
             }

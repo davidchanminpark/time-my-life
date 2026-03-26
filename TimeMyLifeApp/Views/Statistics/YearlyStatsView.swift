@@ -12,6 +12,7 @@ struct YearlyStatsView: View {
 
     @State private var viewModel: YearlyStatsViewModel
     @State private var shareItem: ShareableImage?
+    @State private var isRendering = false
 
     init(dataService: DataService) {
         self.dataService = dataService
@@ -47,9 +48,13 @@ struct YearlyStatsView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { renderAndShare() } label: {
-                    Image(systemName: "square.and.arrow.up")
+                    if isRendering {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: "square.and.arrow.up")
+                    }
                 }
-                .disabled(viewModel.totalHours == 0)
+                .disabled(viewModel.totalHours == 0 || isRendering)
                 .foregroundStyle(Color.appAccent)
             }
         }
@@ -270,11 +275,16 @@ struct YearlyStatsView: View {
     // MARK: - Share
 
     private func renderAndShare() {
-        let card = YearShareCard(viewModel: viewModel)
-        let renderer = ImageRenderer(content: card.frame(width: 360))
-        renderer.scale = 3.0
-        if let uiImage = renderer.uiImage {
-            shareItem = ShareableImage(image: uiImage)
+        guard !isRendering else { return }
+        isRendering = true
+        Task { @MainActor in
+            defer { isRendering = false }
+            let card = YearShareCard(viewModel: viewModel)
+            let renderer = ImageRenderer(content: card.frame(width: 360))
+            renderer.scale = 3.0
+            if let uiImage = renderer.uiImage {
+                shareItem = ShareableImage(image: uiImage)
+            }
         }
     }
 }
