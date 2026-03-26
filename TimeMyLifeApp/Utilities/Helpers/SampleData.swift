@@ -565,6 +565,133 @@ public enum SampleData {
         )
         try context.save()
     }
+
+    // MARK: - Year-Long Dataset for Simulator Testing
+
+    /// Activity definitions used by `seedYearOfData`.
+    private static let yearActivities: [(name: String, colorHex: String, category: String, emoji: String, days: [Int])] = [
+        ("Guitar Practice", "#D4BAFF", "Music",      "🎸", [2, 4, 6]),          // Mon, Wed, Fri
+        ("Reading",         "#BAE1FF", "Learning",    "📚", [1, 2, 3, 4, 5, 6, 7]),
+        ("Gym Workout",     "#C9E4CA", "Fitness",     "🏋️", [2, 4, 6]),
+        ("Meditation",      "#FFCCE1", "Wellness",    "🧘", [1, 2, 3, 4, 5, 6, 7]),
+        ("Coding",          "#BFC8FF", "Work",        "💻", [2, 3, 4, 5, 6]),    // Weekdays
+        ("Cooking",         "#FFD6A5", "Life",        "🍳", [1, 7]),             // Weekend
+        ("Running",         "#CAFFBF", "Fitness",     "🏃", [3, 5, 7]),          // Tue, Thu, Sat
+        ("Drawing",         "#FFB3BA", "Creative",    "🎨", [1, 4, 7]),          // Sun, Wed, Sat
+        ("Language Study",  "#AED6F7", "Learning",    "🗣️", [2, 3, 4, 5, 6]),
+        ("Journaling",      "#FDFFB6", "Wellness",    "📝", [1, 2, 3, 4, 5, 6, 7]),
+    ]
+
+    /// Populates a year's worth of realistic activity data for simulator UI testing.
+    ///
+    /// Creates 10 activities with time entries spanning the past 365 days.
+    /// Entries are only created on each activity's scheduled days and durations
+    /// vary to produce interesting charts (weekday patterns, occasional gaps).
+    /// Goals are created for a subset of activities.
+    ///
+    /// Uses bulk `ModelContext.insert` + a single save for speed (~7 k inserts).
+    ///
+    /// - Parameters:
+    ///   - context: The `ModelContext` to populate.
+    ///   - clearFirst: When `true` (default), deletes existing data before seeding.
+    @MainActor
+    public static func seedYearOfData(in context: ModelContext, clearFirst: Bool = true) throws {
+        if clearFirst {
+            try clearAllData(in: context)
+        }
+
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+
+        // --- Activities -----------------------------------------------------------
+
+        var activities: [Activity] = []
+        for def in yearActivities {
+            let activity = Activity(
+                name: def.name,
+                colorHex: def.colorHex,
+                category: def.category,
+                emoji: def.emoji,
+                scheduledDays: def.days
+            )
+            context.insert(activity)
+            activities.append(activity)
+        }
+
+        // --- Time Entries (365 days) ---------------------------------------------
+
+        // Deterministic seed so the dataset is reproducible across runs.
+        var rng = SeededRandomNumberGenerator(seed: 42)
+
+        for (index, activity) in activities.enumerated() {
+            let scheduledSet = Set(yearActivities[index].days)
+
+            for dayOffset in 0..<365 {
+                guard let date = cal.date(byAdding: .day, value: -dayOffset, to: today) else { continue }
+                let weekday = cal.component(.weekday, from: date) // 1=Sun…7=Sat
+
+                guard scheduledSet.contains(weekday) else { continue }
+
+                // Skip ~10 % of days to create realistic gaps.
+                if Int.random(in: 0..<10, using: &rng) == 0 { continue }
+
+                // Duration varies by activity index to spread the chart nicely.
+                let baseMins = Double((index % 4 + 1) * 15) // 15, 30, 45, 60
+                let jitter   = Double.random(in: -10...10, using: &rng)
+                let mins     = max(5, baseMins + jitter)
+
+                let entry = TimeEntry(
+                    activityID: activity.id,
+                    date: cal.startOfDay(for: date),
+                    totalDuration: mins * 60
+                )
+                context.insert(entry)
+            }
+        }
+
+        // --- Goals (first 5 activities) ------------------------------------------
+
+        let goalDefs: [(idx: Int, freq: GoalFrequency, targetMins: Int)] = [
+            (0, .daily,  30),   // Guitar — 30 min/day
+            (1, .daily,  60),   // Reading — 1 h/day
+            (2, .weekly, 180),  // Gym — 3 h/week
+            (3, .daily,  15),   // Meditation — 15 min/day
+            (4, .weekly, 300),  // Coding — 5 h/week
+        ]
+
+        for def in goalDefs {
+            let goal = Goal(
+                activityID: activities[def.idx].id,
+                frequency: def.freq,
+                targetSeconds: def.targetMins * 60
+            )
+            context.insert(goal)
+        }
+
+        // --- Persist -------------------------------------------------------------
+
+        try context.save()
+
+        // Ensure ActiveTimer singleton exists.
+        _ = try ActiveTimer.shared(in: context)
+    }
+}
+
+// MARK: - Deterministic RNG
+
+/// A simple seedable RNG so that `seedYearOfData` produces the same dataset every time.
+struct SeededRandomNumberGenerator: RandomNumberGenerator {
+    private var state: UInt64
+
+    init(seed: UInt64) { state = seed }
+
+    mutating func next() -> UInt64 {
+        // xorshift64
+        state ^= state << 13
+        state ^= state >> 7
+        state ^= state << 17
+        return state
+    }
 }
 
 // MARK: - ModelContext Extensions for Testing
