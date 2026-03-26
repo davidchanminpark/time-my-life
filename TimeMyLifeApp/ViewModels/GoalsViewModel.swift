@@ -95,10 +95,12 @@ class GoalsViewModel {
         switch goal.frequency {
         case .daily:
             currentProgress = try dailyProgress(activityID: goal.activityID, date: today)
+            let scheduledWeekdays = Set(activity?.scheduledDayInts ?? [1,2,3,4,5,6,7])
             (streak, history) = try dailyStreakAndHistory(
                 activityID: goal.activityID,
                 target: TimeInterval(goal.targetSeconds),
-                today: today
+                today: today,
+                scheduledWeekdays: scheduledWeekdays
             )
         case .weekly:
             let weekStart = currentWeekStart(for: today)
@@ -130,7 +132,8 @@ class GoalsViewModel {
     private func dailyStreakAndHistory(
         activityID: UUID,
         target: TimeInterval,
-        today: Date
+        today: Date,
+        scheduledWeekdays: Set<Int>
     ) throws -> (streak: Int, history: [Bool]) {
         let cal = Calendar.current
 
@@ -142,24 +145,48 @@ class GoalsViewModel {
             uniquingKeysWith: { max($0, $1) }
         )
 
-        // Build last-6-days history (oldest → newest)
+        // Build last-6 scheduled-days history (oldest → newest)
         var history: [Bool] = []
-        for offset in stride(from: 5, through: 0, by: -1) {
-            guard let date = cal.date(byAdding: .day, value: -offset, to: today) else { continue }
-            history.append((durationByDate[date] ?? 0) >= target)
+        var historyOffset = 0
+        while history.count < 6 && historyOffset < 90 {
+            guard let date = cal.date(byAdding: .day, value: -historyOffset, to: today) else { break }
+            let weekday = cal.component(.weekday, from: date)
+            if scheduledWeekdays.contains(weekday) {
+                history.insert((durationByDate[date] ?? 0) >= target, at: 0)
+            }
+            historyOffset += 1
         }
 
-        // Calculate streak: consecutive days ending with the most recent met day
+        // Calculate streak: consecutive scheduled days ending with the most recent met scheduled day
+        // Non-scheduled days are skipped (they don't break the streak)
         var streak = 0
-        let todayMet = (durationByDate[today] ?? 0) >= target
-        let startOffset = todayMet ? 0 : 1
+        var foundStart = false
 
-        for offset in startOffset..<90 {
+        for offset in 0..<90 {
             guard let date = cal.date(byAdding: .day, value: -offset, to: today) else { break }
-            if (durationByDate[date] ?? 0) >= target {
-                streak += 1
+            let weekday = cal.component(.weekday, from: date)
+
+            // Skip non-scheduled days
+            guard scheduledWeekdays.contains(weekday) else { continue }
+
+            let met = (durationByDate[date] ?? 0) >= target
+
+            if !foundStart {
+                // Looking for the first scheduled day that's met
+                if met {
+                    foundStart = true
+                    streak = 1
+                } else {
+                    // Most recent scheduled day not met — skip it (like old "today not met" logic)
+                    // but only skip the first unmet scheduled day
+                    foundStart = true
+                }
             } else {
-                break
+                if met {
+                    streak += 1
+                } else {
+                    break
+                }
             }
         }
 

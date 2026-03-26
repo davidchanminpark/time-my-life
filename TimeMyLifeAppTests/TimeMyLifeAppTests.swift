@@ -252,6 +252,53 @@ final class GoalProgressTests: XCTestCase {
         XCTAssertEqual(sut.dailyGoalsWithProgress[0].streak, 2)
     }
 
+    func testDailyStreak_skipsUnscheduledDays() async throws {
+        let today = cal.startOfDay(for: Date())
+
+        // Compute weekdays for today, 2 days ago, and 4 days ago
+        let day0 = cal.component(.weekday, from: today)
+        let day2 = cal.component(.weekday, from: cal.date(byAdding: .day, value: -2, to: today)!)
+        let day4 = cal.component(.weekday, from: cal.date(byAdding: .day, value: -4, to: today)!)
+
+        // Schedule activity only on those 3 weekdays
+        let scheduledDays = Array(Set([day0, day2, day4]))
+        let a = Activity(name: "Scheduled", colorHex: "#BFC8FF", category: "", scheduledDays: scheduledDays)
+        try dataService.createActivity(a)
+
+        // Meet goal on all 3 scheduled days
+        // Days 1 and 3 ago are NOT scheduled, so they should be skipped
+        try seedEntry(activityID: a.id, daysAgo: 0, seconds: 3600)
+        try seedEntry(activityID: a.id, daysAgo: 2, seconds: 3600)
+        try seedEntry(activityID: a.id, daysAgo: 4, seconds: 3600)
+        try dataService.createGoal(Goal(activityID: a.id, frequency: .daily, targetSeconds: 3600))
+
+        await sut.loadGoals()
+
+        XCTAssertEqual(sut.dailyGoalsWithProgress[0].streak, 3)
+    }
+
+    func testDailyStreak_breaksOnMissedScheduledDay() async throws {
+        let today = cal.startOfDay(for: Date())
+
+        let day0 = cal.component(.weekday, from: today)
+        let day2 = cal.component(.weekday, from: cal.date(byAdding: .day, value: -2, to: today)!)
+        let day4 = cal.component(.weekday, from: cal.date(byAdding: .day, value: -4, to: today)!)
+
+        let scheduledDays = Array(Set([day0, day2, day4]))
+        let a = Activity(name: "Scheduled", colorHex: "#BFC8FF", category: "", scheduledDays: scheduledDays)
+        try dataService.createActivity(a)
+
+        // Meet goal today and 4 days ago, but MISS the scheduled day 2 days ago
+        try seedEntry(activityID: a.id, daysAgo: 0, seconds: 3600)
+        try seedEntry(activityID: a.id, daysAgo: 4, seconds: 3600)
+        try dataService.createGoal(Goal(activityID: a.id, frequency: .daily, targetSeconds: 3600))
+
+        await sut.loadGoals()
+
+        // Streak should be 1 (only today) because 2 days ago (a scheduled day) was missed
+        XCTAssertEqual(sut.dailyGoalsWithProgress[0].streak, 1)
+    }
+
     // MARK: - Daily history
 
     func testDailyHistory_alwaysSixElements() async throws {
