@@ -17,10 +17,7 @@ final class PerformanceTests: XCTestCase {
     let cal = Calendar.current
 
     override func setUp() async throws {
-        let schema = Schema([Activity.self, TimeEntry.self, ActiveTimer.self, Goal.self])
-        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-        container = try ModelContainer(for: schema, configurations: config)
-        dataService = DataService(modelContext: container.mainContext)
+        (container, dataService) = try makeTestDependencies()
     }
 
     override func tearDown() async throws {
