@@ -1,0 +1,44 @@
+name: iOS starter workflow
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    name: Build and Test 
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_16.0.app
+
+      - name: Install xcpretty
+        run: gem install xcpretty
+
+      - name: Show build info
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Build
+        run: |
+          xcodebuild build \
+            -scheme TimeMyLifeApp \
+            -destination "platform=iOS Simulator,name=iPhone 17,OS=latest" \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty
+
+      - name: Run Tests
+        run: |
+          xcodebuild test \
+            -scheme TimeMyLifeApp  \
+            -destination "platform=iOS Simulator,name=iPhone 17,OS=latest" \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty
