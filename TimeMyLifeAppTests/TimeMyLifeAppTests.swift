@@ -187,6 +187,11 @@ final class GoalProgressTests: XCTestCase {
         try dataService.createOrUpdateTimeEntry(activityID: activityID, date: date, duration: seconds)
     }
 
+    private func makeGoal(activityID: UUID, targetSeconds: Int = 3600, createdDaysAgo: Int = 0) throws {
+        let createdDate = cal.date(byAdding: .day, value: -createdDaysAgo, to: cal.startOfDay(for: Date()))!
+        try dataService.createGoal(Goal(activityID: activityID, frequency: .daily, targetSeconds: targetSeconds, createdDate: createdDate))
+    }
+
     // MARK: - Daily streak
 
     func testDailyStreak_zeroWhenNoData() async throws {
@@ -211,7 +216,7 @@ final class GoalProgressTests: XCTestCase {
     func testDailyStreak_countsConsecutiveDays() async throws {
         let a = try makeActivity()
         for d in 0...4 { try seedEntry(activityID: a.id, daysAgo: d, seconds: 3600) }
-        try dataService.createGoal(Goal(activityID: a.id, frequency: .daily, targetSeconds: 3600))
+        try makeGoal(activityID: a.id, createdDaysAgo: 5)
 
         await sut.loadGoals()
 
@@ -223,7 +228,7 @@ final class GoalProgressTests: XCTestCase {
         // today + 2 days ago (miss yesterday)
         try seedEntry(activityID: a.id, daysAgo: 0, seconds: 3600)
         try seedEntry(activityID: a.id, daysAgo: 2, seconds: 3600)
-        try dataService.createGoal(Goal(activityID: a.id, frequency: .daily, targetSeconds: 3600))
+        try makeGoal(activityID: a.id, createdDaysAgo: 3)
 
         await sut.loadGoals()
 
@@ -233,7 +238,7 @@ final class GoalProgressTests: XCTestCase {
     func testDailyStreak_notCountedWhenBelowTarget() async throws {
         let a = try makeActivity()
         for d in 0...2 { try seedEntry(activityID: a.id, daysAgo: d, seconds: 1800) } // 30 min each
-        try dataService.createGoal(Goal(activityID: a.id, frequency: .daily, targetSeconds: 3600))
+        try makeGoal(activityID: a.id, createdDaysAgo: 3)
 
         await sut.loadGoals()
 
@@ -245,7 +250,7 @@ final class GoalProgressTests: XCTestCase {
         // Only yesterday and 2 days ago meet the target; today has no entry
         try seedEntry(activityID: a.id, daysAgo: 1, seconds: 3600)
         try seedEntry(activityID: a.id, daysAgo: 2, seconds: 3600)
-        try dataService.createGoal(Goal(activityID: a.id, frequency: .daily, targetSeconds: 3600))
+        try makeGoal(activityID: a.id, createdDaysAgo: 3)
 
         await sut.loadGoals()
 
@@ -265,12 +270,12 @@ final class GoalProgressTests: XCTestCase {
         let a = Activity(name: "Scheduled", colorHex: "#BFC8FF", category: "", scheduledDays: scheduledDays)
         try dataService.createActivity(a)
 
-        // Meet goal on all 3 scheduled days
-        // Days 1 and 3 ago are NOT scheduled, so they should be skipped
+        // Meet goal on all 3 scheduled days (daysAgo 0, 2, 4)
+        // daysAgo 1 and 3 are NOT scheduled, so they should be skipped
         try seedEntry(activityID: a.id, daysAgo: 0, seconds: 3600)
         try seedEntry(activityID: a.id, daysAgo: 2, seconds: 3600)
         try seedEntry(activityID: a.id, daysAgo: 4, seconds: 3600)
-        try dataService.createGoal(Goal(activityID: a.id, frequency: .daily, targetSeconds: 3600))
+        try makeGoal(activityID: a.id, createdDaysAgo: 5)
 
         await sut.loadGoals()
 
@@ -291,7 +296,7 @@ final class GoalProgressTests: XCTestCase {
         // Meet goal today and 4 days ago, but MISS the scheduled day 2 days ago
         try seedEntry(activityID: a.id, daysAgo: 0, seconds: 3600)
         try seedEntry(activityID: a.id, daysAgo: 4, seconds: 3600)
-        try dataService.createGoal(Goal(activityID: a.id, frequency: .daily, targetSeconds: 3600))
+        try makeGoal(activityID: a.id, createdDaysAgo: 5)
 
         await sut.loadGoals()
 
