@@ -19,7 +19,7 @@ class GoalsViewModel {
         let currentProgress: TimeInterval   // seconds tracked in current period
         let targetSeconds: TimeInterval
         let streak: Int
-        let history: [Bool]                 // last 6 periods (oldest→newest), true = goal met
+        let history: [Bool]                 // last 7 periods (oldest→newest), true = goal met
 
         var id: UUID { goal.id }
 
@@ -185,7 +185,7 @@ class GoalsViewModel {
         try dataService.updateGoal(goal)
     }
 
-    /// Returns last 6 scheduled days as [Bool] (oldest → newest) for history display.
+    /// Returns last 7 scheduled days as [Bool] (oldest → newest) for history display.
     private func dailyHistory(
         activityID: UUID,
         target: TimeInterval,
@@ -195,7 +195,7 @@ class GoalsViewModel {
         let cal = Calendar.current
         var history: [Bool] = []
         var offset = 0
-        while history.count < 6 && offset < 90 {
+        while history.count < 7 && offset < 90 {
             guard let date = cal.date(byAdding: .day, value: -offset, to: today) else { break }
             let weekday = cal.component(.weekday, from: date)
             if scheduledWeekdays.contains(weekday) {
@@ -235,9 +235,9 @@ class GoalsViewModel {
             weekTotals[ws, default: 0] += entry.totalDuration
         }
 
-        // Build last-6-weeks history (oldest → newest)
+        // Build last-7-weeks history (oldest → newest)
         var history: [Bool] = []
-        for offset in stride(from: 5, through: 0, by: -1) {
+        for offset in stride(from: 6, through: 0, by: -1) {
             guard let weekDate = cal.date(byAdding: .weekOfYear, value: -offset, to: today) else { continue }
             let weekStart = currentWeekStart(for: weekDate)
             history.append((weekTotals[weekStart] ?? 0) >= target)

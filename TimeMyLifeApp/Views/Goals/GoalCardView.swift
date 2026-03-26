@@ -81,7 +81,7 @@ struct GoalCardView: View {
         currentProgress: 2100,
         targetSeconds: 3600,
         streak: 5,
-        history: [true, true, false, true, true, true]
+        history: [true, true, false, true, true, true, true]
     )
     GoalCardView(goalWithProgress: item, onTap: {})
         .padding()
