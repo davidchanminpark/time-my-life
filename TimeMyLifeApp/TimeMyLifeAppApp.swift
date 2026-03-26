@@ -75,6 +75,22 @@ struct TimeMyLifeAppApp: App {
                 }
             }
 
+            #if DEBUG
+            // Auto-seed large dataset when launched with -seedLargeDataset argument.
+            // Set via Xcode scheme → Run → Arguments Passed On Launch.
+            if CommandLine.arguments.contains("-seedLargeDataset") {
+                let seedContainer = modelContainer
+                Task { @MainActor in
+                    do {
+                        try SampleData.seedYearOfData(in: seedContainer.mainContext)
+                        print("✅ Seeded year of sample data via launch argument")
+                    } catch {
+                        print("❌ Failed to seed sample data: \(error)")
+                    }
+                }
+            }
+            #endif
+
         } catch {
             let errorMessage = """
             Failed to initialize ModelContainer:

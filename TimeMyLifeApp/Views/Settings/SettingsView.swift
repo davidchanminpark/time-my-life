@@ -26,6 +26,11 @@ struct SettingsView: View {
     @State private var syncError: String? = nil
     @State private var showClearConfirm = false
     @State private var showClearSuccess = false
+    #if DEBUG
+    @State private var showSeedConfirm = false
+    @State private var isSeeding = false
+    @State private var showSeedSuccess = false
+    #endif
 
     init(dataService: DataService, syncService: WatchConnectivitySyncService? = nil) {
         self.dataService = dataService
@@ -41,6 +46,9 @@ struct SettingsView: View {
                 activitiesSection
                 dataSection
                 if syncService != nil { syncSection }
+                #if DEBUG
+                debugSection
+                #endif
                 aboutSection
             }
             .scrollContentBackground(.hidden)
@@ -68,6 +76,21 @@ struct SettingsView: View {
             } message: {
                 Text("All data has been deleted.")
             }
+            #if DEBUG
+            .alert("Load Sample Year?", isPresented: $showSeedConfirm) {
+                Button("Load Data", role: .destructive) {
+                    Task { await seedYearOfData() }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will replace all existing data with a year's worth of sample activities and time entries.")
+            }
+            .alert("Sample Data Loaded", isPresented: $showSeedSuccess) {
+                Button("OK") {}
+            } message: {
+                Text("10 activities with 365 days of time entries and 5 goals have been added.")
+            }
+            #endif
         }
     }
 
@@ -193,6 +216,37 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Debug Section
+
+    #if DEBUG
+    private var debugSection: some View {
+        Section("Developer") {
+            Button {
+                showSeedConfirm = true
+            } label: {
+                HStack {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Load Year of Sample Data")
+                            Text("10 activities × 365 days + goals")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "tablecells.badge.ellipsis")
+                            .foregroundStyle(Color.appAccent)
+                    }
+                    if isSeeding {
+                        Spacer()
+                        ProgressView().scaleEffect(0.8)
+                    }
+                }
+            }
+            .disabled(isSeeding)
+        }
+    }
+    #endif
+
     // MARK: - About Section
 
     private var aboutSection: some View {
@@ -266,6 +320,19 @@ struct SettingsView: View {
             syncError = "Sync failed: \(error.localizedDescription)"
         }
     }
+
+    #if DEBUG
+    private func seedYearOfData() async {
+        isSeeding = true
+        defer { isSeeding = false }
+        do {
+            try SampleData.seedYearOfData(in: dataService.modelContext)
+            showSeedSuccess = true
+        } catch {
+            print("Error seeding year data: \(error)")
+        }
+    }
+    #endif
 
     private func clearAllData() async {
         do {
