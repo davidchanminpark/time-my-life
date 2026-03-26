@@ -100,7 +100,7 @@ final class PerformanceTests: XCTestCase {
                 try dataService.createOrUpdateTimeEntry(activityID: a.id, date: date, duration: 3600)
             }
 
-            let goal = Goal(activityID: a.id, frequency: .daily, targetSeconds: 3600)
+            let goal = Goal(activityID: a.id, frequency: .daily, targetSeconds: 3600, createdDate: lookback)
             try dataService.createGoal(goal)
         }
 

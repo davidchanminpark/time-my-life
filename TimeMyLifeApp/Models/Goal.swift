@@ -35,6 +35,13 @@ public final class Goal {
     /// Timestamp when the goal was created
     public var createdDate: Date
 
+    /// Running streak count, updated incrementally when goals are loaded
+    public var currentStreak: Int
+
+    /// The last scheduled date that was evaluated for the streak
+    /// nil means the streak has never been evaluated (needs full recompute)
+    public var lastStreakDate: Date?
+
     // MARK: - Initialization
 
     public init(
@@ -43,7 +50,9 @@ public final class Goal {
         frequency: GoalFrequency,
         targetSeconds: Int,
         isActive: Bool = true,
-        createdDate: Date = Date()
+        createdDate: Date = Date(),
+        currentStreak: Int = 0,
+        lastStreakDate: Date? = nil
     ) {
         self.id = id
         self.activityID = activityID
@@ -51,15 +60,9 @@ public final class Goal {
         self.targetSeconds = targetSeconds
         self.isActive = isActive
         self.createdDate = createdDate
+        self.currentStreak = currentStreak
+        self.lastStreakDate = lastStreakDate
     }
-
-    // MARK: - Computed Properties (Not Stored)
-
-    /// Current progress is calculated from TimeEntry data
-    /// This should be computed in the ViewModel, not stored in the model
-
-    /// Current streak is calculated from historical TimeEntry data
-    /// This should be computed in the ViewModel, not stored in the model
 }
 
 // MARK: - Codable Conformance for Syncing
@@ -67,6 +70,7 @@ public final class Goal {
 extension Goal: Codable {
     private enum CodingKeys: String, CodingKey {
         case id, activityID, frequency, targetSeconds, isActive, createdDate
+        case currentStreak, lastStreakDate
     }
 
     public convenience init(from decoder: Decoder) throws {
@@ -77,13 +81,17 @@ extension Goal: Codable {
         let targetSeconds = try container.decode(Int.self, forKey: .targetSeconds)
         let isActive = try container.decode(Bool.self, forKey: .isActive)
         let createdDate = try container.decode(Date.self, forKey: .createdDate)
+        let currentStreak = try container.decodeIfPresent(Int.self, forKey: .currentStreak) ?? 0
+        let lastStreakDate = try container.decodeIfPresent(Date.self, forKey: .lastStreakDate)
         self.init(
             id: id,
             activityID: activityID,
             frequency: frequency,
             targetSeconds: targetSeconds,
             isActive: isActive,
-            createdDate: createdDate
+            createdDate: createdDate,
+            currentStreak: currentStreak,
+            lastStreakDate: lastStreakDate
         )
     }
 
@@ -95,5 +103,7 @@ extension Goal: Codable {
         try container.encode(targetSeconds, forKey: .targetSeconds)
         try container.encode(isActive, forKey: .isActive)
         try container.encode(createdDate, forKey: .createdDate)
+        try container.encode(currentStreak, forKey: .currentStreak)
+        try container.encodeIfPresent(lastStreakDate, forKey: .lastStreakDate)
     }
 }

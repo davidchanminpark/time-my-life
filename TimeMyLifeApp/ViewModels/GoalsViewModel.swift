@@ -95,10 +95,21 @@ class GoalsViewModel {
         switch goal.frequency {
         case .daily:
             currentProgress = try dailyProgress(activityID: goal.activityID, date: today)
-            (streak, history) = try dailyStreakAndHistory(
+            let scheduledWeekdays = Set(activity?.scheduledDayInts ?? [1,2,3,4,5,6,7])
+            try updateDailyStreak(
+                goal: goal,
+                scheduledWeekdays: scheduledWeekdays,
+                today: today
+            )
+            // Stored streak counts up to yesterday; add today if it's a scheduled day and met
+            let todayWeekday = Calendar.current.component(.weekday, from: today)
+            let todayMet = scheduledWeekdays.contains(todayWeekday) && currentProgress >= TimeInterval(goal.targetSeconds)
+            streak = goal.currentStreak + (todayMet ? 1 : 0)
+            history = try dailyHistory(
                 activityID: goal.activityID,
                 target: TimeInterval(goal.targetSeconds),
-                today: today
+                today: today,
+                scheduledWeekdays: scheduledWeekdays
             )
         case .weekly:
             let weekStart = currentWeekStart(for: today)
@@ -127,43 +138,74 @@ class GoalsViewModel {
         return entries.first?.totalDuration ?? 0
     }
 
-    private func dailyStreakAndHistory(
-        activityID: UUID,
-        target: TimeInterval,
+    /// Updates goal.currentStreak and goal.lastStreakDate by catching up from
+    /// the last evaluated date (or goal creation) to yesterday.
+    /// Today is excluded because it's still in progress — added at display time.
+    private func updateDailyStreak(
+        goal: Goal,
+        scheduledWeekdays: Set<Int>,
         today: Date
-    ) throws -> (streak: Int, history: [Bool]) {
+    ) throws {
         let cal = Calendar.current
+        let target = TimeInterval(goal.targetSeconds)
+        let yesterday = cal.date(byAdding: .day, value: -1, to: today)!
 
-        // Batch fetch 90 days of entries (1 query instead of up to 96 per goal)
-        let lookbackStart = cal.date(byAdding: .day, value: -90, to: today) ?? today
-        let entries = try dataService.fetchTimeEntries(for: activityID, from: lookbackStart, to: today)
+        // Determine catch-up start: day after last evaluated, or goal creation date
+        let catchUpStart: Date
+        if let last = goal.lastStreakDate {
+            catchUpStart = cal.date(byAdding: .day, value: 1, to: last)!
+        } else {
+            catchUpStart = cal.startOfDay(for: goal.createdDate)
+        }
+
+        guard catchUpStart <= yesterday else { return }
+
+        let entries = try dataService.fetchTimeEntries(for: goal.activityID, from: catchUpStart, to: yesterday)
         let durationByDate: [Date: TimeInterval] = Dictionary(
             entries.map { ($0.date, $0.totalDuration) },
             uniquingKeysWith: { max($0, $1) }
         )
 
-        // Build last-6-days history (oldest → newest)
-        var history: [Bool] = []
-        for offset in stride(from: 5, through: 0, by: -1) {
-            guard let date = cal.date(byAdding: .day, value: -offset, to: today) else { continue }
-            history.append((durationByDate[date] ?? 0) >= target)
-        }
-
-        // Calculate streak: consecutive days ending with the most recent met day
-        var streak = 0
-        let todayMet = (durationByDate[today] ?? 0) >= target
-        let startOffset = todayMet ? 0 : 1
-
-        for offset in startOffset..<90 {
-            guard let date = cal.date(byAdding: .day, value: -offset, to: today) else { break }
-            if (durationByDate[date] ?? 0) >= target {
-                streak += 1
-            } else {
-                break
+        var streak = goal.currentStreak
+        var date = catchUpStart
+        while date <= yesterday {
+            let weekday = cal.component(.weekday, from: date)
+            if scheduledWeekdays.contains(weekday) {
+                if (durationByDate[date] ?? 0) >= target {
+                    streak += 1
+                } else {
+                    streak = 0
+                }
             }
+            date = cal.date(byAdding: .day, value: 1, to: date)!
         }
 
-        return (streak, history)
+        goal.currentStreak = streak
+        goal.lastStreakDate = yesterday
+        try dataService.updateGoal(goal)
+    }
+
+    /// Returns last 6 scheduled days as [Bool] (oldest → newest) for history display.
+    private func dailyHistory(
+        activityID: UUID,
+        target: TimeInterval,
+        today: Date,
+        scheduledWeekdays: Set<Int>
+    ) throws -> [Bool] {
+        let cal = Calendar.current
+        var history: [Bool] = []
+        var offset = 0
+        while history.count < 6 && offset < 90 {
+            guard let date = cal.date(byAdding: .day, value: -offset, to: today) else { break }
+            let weekday = cal.component(.weekday, from: date)
+            if scheduledWeekdays.contains(weekday) {
+                let entries = try dataService.fetchTimeEntries(for: activityID, on: date)
+                let duration = entries.first?.totalDuration ?? 0
+                history.insert(duration >= target, at: 0)
+            }
+            offset += 1
+        }
+        return history
     }
 
     // MARK: - Weekly Helpers
