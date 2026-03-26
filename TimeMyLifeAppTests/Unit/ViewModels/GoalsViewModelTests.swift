@@ -158,32 +158,33 @@ final class GoalsViewModelTests: XCTestCase {
 
     // MARK: - Daily history
 
-    func testDailyHistory_alwaysSixElements() async throws {
+    func testDailyHistory_alwaysSevenElements() async throws {
         let a = try makeActivity()
         try dataService.createGoal(Goal(activityID: a.id, frequency: .daily, targetSeconds: 3600))
 
         await sut.loadGoals()
 
-        XCTAssertEqual(sut.dailyGoalsWithProgress[0].history.count, 6)
+        XCTAssertEqual(sut.dailyGoalsWithProgress[0].history.count, 7)
     }
 
     func testDailyHistory_reflectsMetDays() async throws {
         let a = try makeActivity()
-        // Meet goal today and 5 days ago; miss everything in between
+        // Meet goal today and 6 days ago; miss everything in between
         try seedEntry(activityID: a.id, daysAgo: 0, seconds: 3600)
-        try seedEntry(activityID: a.id, daysAgo: 5, seconds: 3600)
+        try seedEntry(activityID: a.id, daysAgo: 6, seconds: 3600)
         try dataService.createGoal(Goal(activityID: a.id, frequency: .daily, targetSeconds: 3600))
 
         await sut.loadGoals()
 
         let h = sut.dailyGoalsWithProgress[0].history
-        // [oldest=5d ago, 4d, 3d, 2d, 1d, newest=today]
+        // [oldest=6d ago, 5d, 4d, 3d, 2d, 1d, newest=today]
         XCTAssertTrue(h[0])
         XCTAssertFalse(h[1])
         XCTAssertFalse(h[2])
         XCTAssertFalse(h[3])
         XCTAssertFalse(h[4])
-        XCTAssertTrue(h[5])
+        XCTAssertFalse(h[5])
+        XCTAssertTrue(h[6])
     }
 
     // MARK: - Progress fraction
@@ -242,12 +243,12 @@ final class GoalsViewModelTests: XCTestCase {
         XCTAssertEqual(sut.weeklyGoalsWithProgress[0].streak, 3)
     }
 
-    func testWeeklyHistory_alwaysSixElements() async throws {
+    func testWeeklyHistory_alwaysSevenElements() async throws {
         let a = try makeActivity()
         try dataService.createGoal(Goal(activityID: a.id, frequency: .weekly, targetSeconds: 3600))
 
         await sut.loadGoals()
 
-        XCTAssertEqual(sut.weeklyGoalsWithProgress[0].history.count, 6)
+        XCTAssertEqual(sut.weeklyGoalsWithProgress[0].history.count, 7)
     }
 }
