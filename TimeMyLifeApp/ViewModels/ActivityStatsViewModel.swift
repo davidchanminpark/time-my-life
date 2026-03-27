@@ -37,6 +37,8 @@ class ActivityStatsViewModel {
 
     var metrics: Metrics?
     var trendData: [TrendPoint] = []
+    var periodBarData: [TrendPoint] = []
+    var periodBarUsesWeeks = false
     var recentEntries: [TimeEntry] = []
     var isLoading = false
 
@@ -55,6 +57,23 @@ class ActivityStatsViewModel {
 
     var trendChartUseMinuteYAxis: Bool {
         StatsChartYAxis.useMinuteLabels(maxHours: trendChartMaxHours, period: .daily)
+    }
+
+    /// Peak hours in a single period bar (for chart Y axis).
+    var periodBarChartMaxHours: Double {
+        periodBarData.map(\.hours).max() ?? 0
+    }
+
+    var periodBarChartYAxisTickHours: [Double] {
+        StatsChartYAxis.yTickHours(
+            maxHours: periodBarChartMaxHours,
+            period: .weekly,
+            hasData: !periodBarData.isEmpty
+        )
+    }
+
+    var periodBarChartUseMinuteYAxis: Bool {
+        StatsChartYAxis.useMinuteLabels(maxHours: periodBarChartMaxHours, period: .weekly)
     }
 
     let activity: Activity
@@ -220,6 +239,69 @@ class ActivityStatsViewModel {
                 guard let date = cal.date(byAdding: .day, value: offset, to: thirtyDaysAgo) else { return nil }
                 let hours = (entryByDate[date]?.totalDuration ?? 0) / 3600
                 return TrendPoint(date: date, hours: hours)
+            }
+
+            // Period bar chart: monthly (last 12 months) or weekly (last 12 weeks, fallback for < 3 months of data)
+            let monthsOfData = cal.dateComponents([.month], from: activity.createdAt, to: today).month ?? 0
+            if monthsOfData >= 3 {
+                // Monthly mode: last 12 months from today
+                periodBarUsesWeeks = false
+                let twelveMonthsAgo = cal.date(byAdding: .month, value: -11, to: today)!
+                let barStartComps = cal.dateComponents([.year, .month], from: twelveMonthsAgo)
+                let barStart = cal.date(from: barStartComps)!
+
+                // Fetch entries before yearStart if the 12-month window extends into last year
+                var barEntries = yearNonZero
+                if barStart < yearStart {
+                    let prevYearEntries = try dataService.fetchTimeEntries(
+                        for: activity.id, from: barStart, to: cal.date(byAdding: .day, value: -1, to: yearStart)!
+                    ).filter { $0.totalDuration > 0 }
+                    barEntries = prevYearEntries + yearNonZero
+                }
+
+                var durationByMonth: [Date: TimeInterval] = [:]
+                for entry in barEntries {
+                    let comps = cal.dateComponents([.year, .month], from: entry.date)
+                    let monthStart = cal.date(from: comps)!
+                    durationByMonth[monthStart, default: 0] += entry.totalDuration
+                }
+                var bars: [TrendPoint] = []
+                for offset in stride(from: -11, through: 0, by: 1) {
+                    guard let monthDate = cal.date(byAdding: .month, value: offset, to: today) else { continue }
+                    let comps = cal.dateComponents([.year, .month], from: monthDate)
+                    let monthStart = cal.date(from: comps)!
+                    let hours = (durationByMonth[monthStart] ?? 0) / 3600
+                    bars.append(TrendPoint(date: monthStart, hours: hours))
+                }
+                periodBarData = bars
+            } else {
+                // Weekly mode: last 12 weeks from today
+                periodBarUsesWeeks = true
+                let twelveWeeksAgo = cal.date(byAdding: .weekOfYear, value: -11, to: today)!
+                let barStart = weekStart(for: twelveWeeksAgo, calendar: cal)
+
+                // Fetch entries before yearStart if the 12-week window extends into last year
+                var barEntries = yearNonZero
+                if barStart < yearStart {
+                    let prevYearEntries = try dataService.fetchTimeEntries(
+                        for: activity.id, from: barStart, to: cal.date(byAdding: .day, value: -1, to: yearStart)!
+                    ).filter { $0.totalDuration > 0 }
+                    barEntries = prevYearEntries + yearNonZero
+                }
+
+                var durationByWeek: [Date: TimeInterval] = [:]
+                for entry in barEntries {
+                    let ws = weekStart(for: entry.date, calendar: cal)
+                    durationByWeek[ws, default: 0] += entry.totalDuration
+                }
+                var bars: [TrendPoint] = []
+                for offset in stride(from: -11, through: 0, by: 1) {
+                    guard let weekDate = cal.date(byAdding: .weekOfYear, value: offset, to: today) else { continue }
+                    let ws = weekStart(for: weekDate, calendar: cal)
+                    let hours = (durationByWeek[ws] ?? 0) / 3600
+                    bars.append(TrendPoint(date: ws, hours: hours))
+                }
+                periodBarData = bars
             }
 
             // Recent entries: last 10 non-zero from current year, newest first

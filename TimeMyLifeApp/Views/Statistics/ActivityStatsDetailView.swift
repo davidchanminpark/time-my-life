@@ -31,6 +31,7 @@ struct ActivityStatsDetailView: View {
                         metricsCard(metrics: metrics)
                         streaksCard(metrics: metrics)
                         trendsCard
+                        periodBarCard
                         recentSessionsCard
                     } else {
                         ContentUnavailableView(
@@ -259,6 +260,65 @@ struct ActivityStatsDetailView: View {
                                 Text(StatsChartYAxis.yAxisLabel(
                                     hours: h,
                                     useMinuteLabels: viewModel.trendChartUseMinuteYAxis
+                                ))
+                                .font(.caption2)
+                            }
+                        }
+                    }
+                }
+                .frame(height: 160)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
+            }
+        }
+        .appCard()
+    }
+
+    // MARK: - Period Bar Chart
+
+    private var periodBarCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(viewModel.periodBarUsesWeeks ? "Weekly Trend" : "Monthly Trend")
+                .font(.system(.headline, design: .rounded, weight: .semibold))
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+
+            if viewModel.periodBarData.isEmpty {
+                Text("No data")
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
+            } else {
+                Chart(viewModel.periodBarData) { point in
+                    BarMark(
+                        x: .value("Date", point.date, unit: viewModel.periodBarUsesWeeks ? .weekOfYear : .month),
+                        y: .value("Hours", point.hours)
+                    )
+                    .foregroundStyle(activity.color())
+                    .cornerRadius(4)
+                }
+                .chartXAxis {
+                    if viewModel.periodBarUsesWeeks {
+                        AxisMarks(values: .stride(by: .weekOfYear, count: 2)) { _ in
+                            AxisGridLine()
+                            AxisValueLabel(format: .dateTime.month(.abbreviated).day())
+                        }
+                    } else {
+                        AxisMarks(values: .stride(by: .month, count: 2)) { _ in
+                            AxisGridLine()
+                            AxisValueLabel(format: .dateTime.month(.abbreviated))
+                        }
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(values: viewModel.periodBarChartYAxisTickHours) { value in
+                        AxisGridLine()
+                        AxisValueLabel {
+                            if let h = value.as(Double.self) {
+                                Text(StatsChartYAxis.yAxisLabel(
+                                    hours: h,
+                                    useMinuteLabels: viewModel.periodBarChartUseMinuteYAxis
                                 ))
                                 .font(.caption2)
                             }
