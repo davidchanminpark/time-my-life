@@ -236,6 +236,51 @@ final class ActivityStatsViewModelTests: XCTestCase {
         XCTAssertNotNil(a.longestDailyStreakEndDate)
     }
 
+    func test_longestDailyStreak_preservedWhenCurrentStreakIsShorter() async throws {
+        let a = try makeActivity()
+        let today = cal.startOfDay(for: Date())
+        let createdDate = cal.date(byAdding: .day, value: -20, to: today)!
+
+        // Historical 5-day streak: 15–19 days ago
+        for d in 15...19 { try seedEntry(activityID: a.id, daysAgo: d, seconds: 3600) }
+        // Gap at day 14 (missed)
+        // Current 2-day streak: today + yesterday
+        try seedEntry(activityID: a.id, daysAgo: 0, seconds: 3600)
+        try seedEntry(activityID: a.id, daysAgo: 1, seconds: 3600)
+
+        try dataService.createGoal(Goal(activityID: a.id, frequency: .daily, targetSeconds: 3600, createdDate: createdDate))
+
+        let goalsVM = GoalsViewModel(dataService: dataService)
+        await goalsVM.loadGoals()
+
+        // Longest should be the historical 5, not the current 2
+        XCTAssertEqual(a.longestDailyStreakCount, 5)
+    }
+
+    func test_longestDailyStreak_dateRangeMatchesHistoricalStreak() async throws {
+        let a = try makeActivity()
+        let today = cal.startOfDay(for: Date())
+        let createdDate = cal.date(byAdding: .day, value: -15, to: today)!
+
+        // 3-day streak: 10, 11, 12 days ago
+        for d in 10...12 { try seedEntry(activityID: a.id, daysAgo: d, seconds: 3600) }
+        // Gap, then current 1-day streak
+        try seedEntry(activityID: a.id, daysAgo: 0, seconds: 3600)
+
+        try dataService.createGoal(Goal(activityID: a.id, frequency: .daily, targetSeconds: 3600, createdDate: createdDate))
+
+        let goalsVM = GoalsViewModel(dataService: dataService)
+        await goalsVM.loadGoals()
+
+        XCTAssertEqual(a.longestDailyStreakCount, 3)
+        // End date should be 10 days ago (most recent day of the best streak)
+        let expectedEnd = cal.date(byAdding: .day, value: -10, to: today)!
+        XCTAssertEqual(a.longestDailyStreakEndDate, expectedEnd)
+        // Start date should be 12 days ago
+        let expectedStart = cal.date(byAdding: .day, value: -12, to: today)!
+        XCTAssertEqual(a.longestDailyStreakStartDate, expectedStart)
+    }
+
     func test_longestWeeklyStreak_updatedByGoalsViewModel() async throws {
         let a = try makeActivity()
         for weeksAgo in 0...2 {
@@ -249,6 +294,25 @@ final class ActivityStatsViewModelTests: XCTestCase {
         XCTAssertEqual(a.longestWeeklyStreakCount, 3)
         XCTAssertNotNil(a.longestWeeklyStreakStartDate)
         XCTAssertNotNil(a.longestWeeklyStreakEndDate)
+    }
+
+    func test_longestWeeklyStreak_preservedWhenCurrentStreakIsShorter() async throws {
+        let a = try makeActivity()
+        // Historical 4-week streak: 8, 9, 10, 11 weeks ago
+        for weeksAgo in 8...11 {
+            try seedEntry(activityID: a.id, daysAgo: weeksAgo * 7, seconds: 7200)
+        }
+        // Gap (skip week 7)
+        // Current 1-week streak: this week only
+        try seedEntry(activityID: a.id, daysAgo: 0, seconds: 7200)
+
+        try dataService.createGoal(Goal(activityID: a.id, frequency: .weekly, targetSeconds: 3600))
+
+        let goalsVM = GoalsViewModel(dataService: dataService)
+        await goalsVM.loadGoals()
+
+        // Longest should be the historical 4, not the current 1
+        XCTAssertEqual(a.longestWeeklyStreakCount, 4)
     }
 
     // MARK: - Backfill

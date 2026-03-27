@@ -96,7 +96,7 @@ class GoalsViewModel {
         case .daily:
             currentProgress = try dailyProgress(activityID: goal.activityID, date: today)
             let scheduledWeekdays = Set(activity?.scheduledDayInts ?? [1,2,3,4,5,6,7])
-            try updateDailyStreak(
+            let catchUpPeak = try updateDailyStreak(
                 goal: goal,
                 scheduledWeekdays: scheduledWeekdays,
                 today: today
@@ -112,15 +112,23 @@ class GoalsViewModel {
                 scheduledWeekdays: scheduledWeekdays
             )
 
-            // Update longest daily streak on Activity if current streak is longer
-            if let activity, streak > activity.longestDailyStreakCount {
+            // Best streak is the max of the catch-up peak and the current streak (including today)
+            let bestCount: Int
+            let bestStart: Date?
+            let bestEnd: Date?
+            if streak > catchUpPeak.peakCount {
                 let endDate = todayMet ? today : Calendar.current.date(byAdding: .day, value: -1, to: today)!
-                let startDate = walkBackScheduledDays(from: endDate, count: streak - 1, scheduledWeekdays: scheduledWeekdays)
-                activity.longestDailyStreakCount = streak
-                activity.longestDailyStreakStartDate = startDate
-                activity.longestDailyStreakEndDate = endDate
-                try dataService.updateActivity(activity)
+                bestCount = streak
+                bestStart = walkBackScheduledDays(from: endDate, count: streak - 1, scheduledWeekdays: scheduledWeekdays)
+                bestEnd = endDate
+            } else {
+                bestCount = catchUpPeak.peakCount
+                bestStart = catchUpPeak.runStart ?? catchUpPeak.peakEnd.flatMap {
+                    walkBackScheduledDays(from: $0, count: catchUpPeak.peakCount - 1, scheduledWeekdays: scheduledWeekdays)
+                }
+                bestEnd = catchUpPeak.peakEnd
             }
+            try updateLongestDailyStreak(on: activity, count: bestCount, start: bestStart, end: bestEnd)
 
         case .weekly:
             let weekStart = currentWeekStart(for: today)
@@ -132,17 +140,12 @@ class GoalsViewModel {
             )
             streak = weeklyResult.streak
             history = weeklyResult.history
-
-            // Update longest weekly streak on Activity if current streak is longer
-            if let activity, streak > activity.longestWeeklyStreakCount {
-                let endWeekStart = weeklyResult.streakEndWeekStart ?? currentWeekStart(for: today)
-                let cal = Calendar.current
-                let startWeekStart = cal.date(byAdding: .weekOfYear, value: -(streak - 1), to: endWeekStart)!
-                activity.longestWeeklyStreakCount = streak
-                activity.longestWeeklyStreakStartDate = startWeekStart
-                activity.longestWeeklyStreakEndDate = endWeekStart
-                try dataService.updateActivity(activity)
-            }
+            try updateLongestWeeklyStreak(
+                on: activity,
+                count: weeklyResult.peakStreak,
+                start: weeklyResult.peakStartWeek,
+                end: weeklyResult.peakEndWeek
+            )
         }
 
         return GoalWithProgress(
@@ -165,11 +168,16 @@ class GoalsViewModel {
     /// Updates goal.currentStreak and goal.lastStreakDate by catching up from
     /// the last evaluated date (or goal creation) to yesterday.
     /// Today is excluded because it's still in progress — added at display time.
+    /// Also tracks the peak streak during catch-up and updates the activity's
+    /// longest daily streak if a new all-time best is found.
+    /// Updates goal.currentStreak and goal.lastStreakDate by catching up from
+    /// the last evaluated date (or goal creation) to yesterday.
+    /// Returns the peak streak seen during the catch-up walk (count + end date + run start).
     private func updateDailyStreak(
         goal: Goal,
         scheduledWeekdays: Set<Int>,
         today: Date
-    ) throws {
+    ) throws -> (peakCount: Int, peakEnd: Date?, runStart: Date?) {
         let cal = Calendar.current
         let target = TimeInterval(goal.targetSeconds)
         let yesterday = cal.date(byAdding: .day, value: -1, to: today)!
@@ -182,7 +190,7 @@ class GoalsViewModel {
             catchUpStart = cal.startOfDay(for: goal.createdDate)
         }
 
-        guard catchUpStart <= yesterday else { return }
+        guard catchUpStart <= yesterday else { return (goal.currentStreak, nil, nil) }
 
         let entries = try dataService.fetchTimeEntries(for: goal.activityID, from: catchUpStart, to: yesterday)
         let durationByDate: [Date: TimeInterval] = Dictionary(
@@ -191,14 +199,24 @@ class GoalsViewModel {
         )
 
         var streak = goal.currentStreak
+        var peakStreak = streak
+        var peakEnd: Date? = nil
+        var streakStart: Date? = nil
+
         var date = catchUpStart
         while date <= yesterday {
             let weekday = cal.component(.weekday, from: date)
             if scheduledWeekdays.contains(weekday) {
                 if (durationByDate[date] ?? 0) >= target {
+                    if streak == 0 { streakStart = date }
                     streak += 1
+                    if streak > peakStreak {
+                        peakStreak = streak
+                        peakEnd = date
+                    }
                 } else {
                     streak = 0
+                    streakStart = nil
                 }
             }
             date = cal.date(byAdding: .day, value: 1, to: date)!
@@ -207,6 +225,8 @@ class GoalsViewModel {
         goal.currentStreak = streak
         goal.lastStreakDate = yesterday
         try dataService.updateGoal(goal)
+
+        return (peakStreak, peakEnd, streakStart)
     }
 
     /// Returns last 6 scheduled days as [Bool] (oldest → newest) for history display.
@@ -245,7 +265,7 @@ class GoalsViewModel {
         activityID: UUID,
         target: TimeInterval,
         today: Date
-    ) throws -> (streak: Int, history: [Bool], streakEndWeekStart: Date?) {
+    ) throws -> (streak: Int, history: [Bool], streakEndWeekStart: Date?, peakStreak: Int, peakStartWeek: Date?, peakEndWeek: Date?) {
         let cal = Calendar.current
 
         // Batch fetch 52 weeks of entries (1 query instead of up to 58 per goal)
@@ -267,7 +287,7 @@ class GoalsViewModel {
             history.append((weekTotals[weekStart] ?? 0) >= target)
         }
 
-        // Calculate streak: consecutive weeks ending with the most recent met week
+        // Calculate current streak: consecutive weeks ending with the most recent met week
         var streak = 0
         let thisWeekStart = currentWeekStart(for: today)
         let thisWeekMet = (weekTotals[thisWeekStart] ?? 0) >= target
@@ -283,7 +303,7 @@ class GoalsViewModel {
             }
         }
 
-        // Determine the week start where the streak began
+        // Determine the week start where the current streak ends
         var streakEndWeekStart: Date? = nil
         if streak > 0 {
             let endOffset = thisWeekMet ? 0 : 1
@@ -292,7 +312,47 @@ class GoalsViewModel {
             }
         }
 
-        return (streak, history, streakEndWeekStart)
+        // Find all-time longest weekly streak by scanning chronologically
+        let sortedWeeks = weekTotals.keys.sorted()
+        var peakStreak = streak
+        var peakStartWeek: Date? = streakEndWeekStart.flatMap { cal.date(byAdding: .weekOfYear, value: -(streak - 1), to: $0) }
+        var peakEndWeek: Date? = streakEndWeekStart
+        var runStreak = 0
+        var runStart: Date? = nil
+
+        for (index, ws) in sortedWeeks.enumerated() {
+            let met = (weekTotals[ws] ?? 0) >= target
+            let isConsecutive: Bool
+            if index > 0 {
+                let expected = cal.date(byAdding: .weekOfYear, value: 1, to: sortedWeeks[index - 1])!
+                isConsecutive = (ws == expected)
+            } else {
+                isConsecutive = true
+            }
+
+            if met && isConsecutive {
+                if runStreak == 0 { runStart = ws }
+                runStreak += 1
+                if runStreak > peakStreak {
+                    peakStreak = runStreak
+                    peakStartWeek = runStart
+                    peakEndWeek = ws
+                }
+            } else if met {
+                runStreak = 1
+                runStart = ws
+                if runStreak > peakStreak {
+                    peakStreak = runStreak
+                    peakStartWeek = runStart
+                    peakEndWeek = ws
+                }
+            } else {
+                runStreak = 0
+                runStart = nil
+            }
+        }
+
+        return (streak, history, streakEndWeekStart, peakStreak, peakStartWeek, peakEndWeek)
     }
 
     // MARK: - Date Helpers
@@ -321,5 +381,25 @@ class GoalsViewModel {
             offset += 1
         }
         return result
+    }
+
+    // MARK: - Longest Streak Updates
+
+    /// Updates activity's longest daily streak if the given count exceeds the cached value.
+    private func updateLongestDailyStreak(on activity: Activity?, count: Int, start: Date?, end: Date?) throws {
+        guard let activity, count > activity.longestDailyStreakCount else { return }
+        activity.longestDailyStreakCount = count
+        activity.longestDailyStreakStartDate = start
+        activity.longestDailyStreakEndDate = end
+        try dataService.updateActivity(activity)
+    }
+
+    /// Updates activity's longest weekly streak if the given count exceeds the cached value.
+    private func updateLongestWeeklyStreak(on activity: Activity?, count: Int, start: Date?, end: Date?) throws {
+        guard let activity, count > activity.longestWeeklyStreakCount else { return }
+        activity.longestWeeklyStreakCount = count
+        activity.longestWeeklyStreakStartDate = start
+        activity.longestWeeklyStreakEndDate = end
+        try dataService.updateActivity(activity)
     }
 }
