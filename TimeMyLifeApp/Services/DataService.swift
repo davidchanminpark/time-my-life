@@ -245,13 +245,23 @@ public class DataService {
         }
         
         try modelContext.save()
-        
+
+        // Update cached allTimeTotalSeconds on the Activity
+        if validDuration > 0, let activity = try fetchActivity(id: activityID) {
+            activity.allTimeTotalSeconds += validDuration
+            try modelContext.save()
+
+            Task {
+                try? await syncService?.syncModel(activity, type: .activity, action: .update)
+            }
+        }
+
         // Sync to counterpart device
         Task {
             try? await syncService?.syncModel(timeEntry, type: .timeEntry, action: action)
         }
     }
-    
+
     /// Deletes a time entry
     /// - Parameter entry: TimeEntry to delete
     /// - Throws: Error if save fails
@@ -388,6 +398,19 @@ public class DataService {
         return max(firstActivityMonthStart, twelveMonthWindowStart)
     }
     
+    // MARK: - Stats Backfill
+
+    /// Recalculates allTimeTotalSeconds for all activities from their time entries.
+    /// Call once on migration or when cached stats may be stale.
+    public func backfillAllActivityStats() throws {
+        let activities = try fetchActivities()
+        for activity in activities {
+            let entries = try fetchAllTimeEntries(for: activity.id)
+            activity.allTimeTotalSeconds = entries.reduce(0) { $0 + $1.totalDuration }
+        }
+        try modelContext.save()
+    }
+
     // MARK: - Utility Methods
     
     /// Clears all data from the database (useful for testing)
@@ -462,7 +485,14 @@ public class DataService {
                 existing.name = activity.name
                 existing.colorHex = activity.colorHex
                 existing.category = activity.category
-                
+                existing.allTimeTotalSeconds = activity.allTimeTotalSeconds
+                existing.longestDailyStreakCount = activity.longestDailyStreakCount
+                existing.longestDailyStreakStartDate = activity.longestDailyStreakStartDate
+                existing.longestDailyStreakEndDate = activity.longestDailyStreakEndDate
+                existing.longestWeeklyStreakCount = activity.longestWeeklyStreakCount
+                existing.longestWeeklyStreakStartDate = activity.longestWeeklyStreakStartDate
+                existing.longestWeeklyStreakEndDate = activity.longestWeeklyStreakEndDate
+
                 // Update scheduled days relationship
                 // Delete old scheduled days
                 for day in existing.scheduledDays {

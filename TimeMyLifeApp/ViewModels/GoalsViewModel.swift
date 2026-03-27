@@ -111,14 +111,38 @@ class GoalsViewModel {
                 today: today,
                 scheduledWeekdays: scheduledWeekdays
             )
+
+            // Update longest daily streak on Activity if current streak is longer
+            if let activity, streak > activity.longestDailyStreakCount {
+                let endDate = todayMet ? today : Calendar.current.date(byAdding: .day, value: -1, to: today)!
+                let startDate = walkBackScheduledDays(from: endDate, count: streak - 1, scheduledWeekdays: scheduledWeekdays)
+                activity.longestDailyStreakCount = streak
+                activity.longestDailyStreakStartDate = startDate
+                activity.longestDailyStreakEndDate = endDate
+                try dataService.updateActivity(activity)
+            }
+
         case .weekly:
             let weekStart = currentWeekStart(for: today)
             currentProgress = try weeklyProgress(activityID: goal.activityID, weekStart: weekStart)
-            (streak, history) = try weeklyStreakAndHistory(
+            let weeklyResult = try weeklyStreakAndHistory(
                 activityID: goal.activityID,
                 target: TimeInterval(goal.targetSeconds),
                 today: today
             )
+            streak = weeklyResult.streak
+            history = weeklyResult.history
+
+            // Update longest weekly streak on Activity if current streak is longer
+            if let activity, streak > activity.longestWeeklyStreakCount {
+                let endWeekStart = weeklyResult.streakEndWeekStart ?? currentWeekStart(for: today)
+                let cal = Calendar.current
+                let startWeekStart = cal.date(byAdding: .weekOfYear, value: -(streak - 1), to: endWeekStart)!
+                activity.longestWeeklyStreakCount = streak
+                activity.longestWeeklyStreakStartDate = startWeekStart
+                activity.longestWeeklyStreakEndDate = endWeekStart
+                try dataService.updateActivity(activity)
+            }
         }
 
         return GoalWithProgress(
@@ -221,7 +245,7 @@ class GoalsViewModel {
         activityID: UUID,
         target: TimeInterval,
         today: Date
-    ) throws -> (streak: Int, history: [Bool]) {
+    ) throws -> (streak: Int, history: [Bool], streakEndWeekStart: Date?) {
         let cal = Calendar.current
 
         // Batch fetch 52 weeks of entries (1 query instead of up to 58 per goal)
@@ -259,7 +283,16 @@ class GoalsViewModel {
             }
         }
 
-        return (streak, history)
+        // Determine the week start where the streak began
+        var streakEndWeekStart: Date? = nil
+        if streak > 0 {
+            let endOffset = thisWeekMet ? 0 : 1
+            if let weekDate = cal.date(byAdding: .weekOfYear, value: -endOffset, to: today) {
+                streakEndWeekStart = currentWeekStart(for: weekDate)
+            }
+        }
+
+        return (streak, history, streakEndWeekStart)
     }
 
     // MARK: - Date Helpers
@@ -269,5 +302,24 @@ class GoalsViewModel {
         let weekday = cal.component(.weekday, from: date) // 1=Sun
         let daysFromSunday = weekday - 1
         return cal.date(byAdding: .day, value: -daysFromSunday, to: cal.startOfDay(for: date)) ?? date
+    }
+
+    /// Walk back through scheduled days to find the start of a streak.
+    /// From `endDate`, walks backwards `count` scheduled days.
+    private func walkBackScheduledDays(from endDate: Date, count: Int, scheduledWeekdays: Set<Int>) -> Date {
+        let cal = Calendar.current
+        var result = endDate
+        var remaining = count
+        var offset = 1
+        while remaining > 0 && offset < 365 {
+            guard let date = cal.date(byAdding: .day, value: -offset, to: endDate) else { break }
+            let weekday = cal.component(.weekday, from: date)
+            if scheduledWeekdays.contains(weekday) {
+                result = date
+                remaining -= 1
+            }
+            offset += 1
+        }
+        return result
     }
 }

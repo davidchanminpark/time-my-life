@@ -61,6 +61,25 @@ public final class Activity {
     /// Timestamp when the activity was created
     public var createdAt: Date
 
+    // MARK: - Cached Stats
+
+    /// All-time total tracked seconds (updated incrementally when time entries are added)
+    public var allTimeTotalSeconds: Double = 0
+
+    /// Longest daily streak count (all-time, updated when goals are evaluated)
+    public var longestDailyStreakCount: Int = 0
+    /// Start date of the longest daily streak
+    public var longestDailyStreakStartDate: Date?
+    /// End date of the longest daily streak
+    public var longestDailyStreakEndDate: Date?
+
+    /// Longest weekly streak count (all-time, updated when goals are evaluated)
+    public var longestWeeklyStreakCount: Int = 0
+    /// Start date of the longest weekly streak
+    public var longestWeeklyStreakStartDate: Date?
+    /// End date of the longest weekly streak
+    public var longestWeeklyStreakEndDate: Date?
+
     // MARK: - Initialization
 
     /// Standard initializer (required for SwiftData @Model macro)
@@ -233,8 +252,15 @@ extension Activity: Codable {
         case emoji
         case scheduledDays
         case createdAt
+        case allTimeTotalSeconds
+        case longestDailyStreakCount
+        case longestDailyStreakStartDate
+        case longestDailyStreakEndDate
+        case longestWeeklyStreakCount
+        case longestWeeklyStreakStartDate
+        case longestWeeklyStreakEndDate
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
@@ -245,8 +271,15 @@ extension Activity: Codable {
         // Encode scheduledDays as array of integers for syncing
         try container.encode(scheduledDayInts, forKey: .scheduledDays)
         try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(allTimeTotalSeconds, forKey: .allTimeTotalSeconds)
+        try container.encode(longestDailyStreakCount, forKey: .longestDailyStreakCount)
+        try container.encodeIfPresent(longestDailyStreakStartDate, forKey: .longestDailyStreakStartDate)
+        try container.encodeIfPresent(longestDailyStreakEndDate, forKey: .longestDailyStreakEndDate)
+        try container.encode(longestWeeklyStreakCount, forKey: .longestWeeklyStreakCount)
+        try container.encodeIfPresent(longestWeeklyStreakStartDate, forKey: .longestWeeklyStreakStartDate)
+        try container.encodeIfPresent(longestWeeklyStreakEndDate, forKey: .longestWeeklyStreakEndDate)
     }
-    
+
     public convenience init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let id = try container.decode(UUID.self, forKey: .id)
@@ -266,6 +299,14 @@ extension Activity: Codable {
             scheduledDays: scheduledDays,
             createdAt: createdAt
         )
+
+        self.allTimeTotalSeconds = (try? container.decodeIfPresent(Double.self, forKey: .allTimeTotalSeconds)) ?? 0
+        self.longestDailyStreakCount = (try? container.decodeIfPresent(Int.self, forKey: .longestDailyStreakCount)) ?? 0
+        self.longestDailyStreakStartDate = try? container.decodeIfPresent(Date.self, forKey: .longestDailyStreakStartDate)
+        self.longestDailyStreakEndDate = try? container.decodeIfPresent(Date.self, forKey: .longestDailyStreakEndDate)
+        self.longestWeeklyStreakCount = (try? container.decodeIfPresent(Int.self, forKey: .longestWeeklyStreakCount)) ?? 0
+        self.longestWeeklyStreakStartDate = try? container.decodeIfPresent(Date.self, forKey: .longestWeeklyStreakStartDate)
+        self.longestWeeklyStreakEndDate = try? container.decodeIfPresent(Date.self, forKey: .longestWeeklyStreakEndDate)
     }
 }
 
