@@ -3,66 +3,80 @@
 **Link:** https://github.com/davidchanminpark/time-my-life/issues/5
 
 ## Problem
-Current ActivityStatsDetailView shows 30-day-only metrics that aren't very meaningful (e.g., "Days Tracked" isn't insightful). Need all-time stats, consistency %, goal success rate, longest streaks with date ranges, and a cumulative hours graph.
+Current implementation caches stats on Activity model and updates incrementally. This is complex, stale for sample data, and makes future time entry editing difficult. Stats should be year-scoped and computed on the fly.
 
-## Plan
+**PR comment:** Daily average should divide by all calendar days, not tracked days.
 
-### Step 1: Add cached fields to Activity model
-Add to `Activity.swift`:
-- `allTimeTotalSeconds: Double` (default 0)
-- `longestDailyStreakCount: Int` (default 0)
-- `longestDailyStreakStartDate: Date?`
-- `longestDailyStreakEndDate: Date?`
-- `longestWeeklyStreakCount: Int` (default 0)
-- `longestWeeklyStreakStartDate: Date?`
-- `longestWeeklyStreakEndDate: Date?`
+## Plan: Year-scoped stats & remove cached fields
 
-Update Codable extension to encode/decode new fields (with backward compat via `decodeIfPresent`).
+### Step 1: Rewrite `ActivityStatsViewModel.loadStats()` — year-scoped
+Fetch entries for `activity.id` from Jan 1 of current year to today. Compute in one pass:
+- **Total Time**: sum of durations
+- **Daily Average**: total / calendar days elapsed in year
+- **Weekly Average**: total / (days elapsed / 7.0)
+- **Consistency (30d)**: tracked days / scheduled days (unchanged, but capped to yearStart if in January)
+- **Goal Success Rate (30d)**: met days / tracked days (unchanged, capped to yearStart)
+- **Longest Daily Streak**: walk Jan 1→today, consecutive scheduled days meeting daily goal. Only if daily goal exists.
+- **Longest Weekly Streak**: group by week, scan chronologically. Only if weekly goal exists.
+- Add private `weekStart(for:cal:)` helper
+- Edge case: Jan 1-29, 30d window → clamp to yearStart (don't look at previous year)
 
-### Step 2: Update DataService to maintain cached fields
-In `createOrUpdateTimeEntry()`:
-- After saving, fetch the Activity and update `allTimeTotalSeconds += duration`
+**File:** `TimeMyLifeApp/ViewModels/ActivityStatsViewModel.swift`
 
-### Step 3: Add backfill method to DataService
-Add `backfillActivityStats(for:)` that recalculates `allTimeTotalSeconds` from all time entries. Called on first load / migration.
+### Step 2: Simplify `GoalsViewModel` — remove peak tracking & Activity updates
+- `updateDailyStreak()`: return `Void`, remove peak tracking vars
+- `weeklyStreakAndHistory()`: return `(streak: Int, history: [Bool])`, remove peak scan + `streakEndWeekStart`
+- `buildGoalWithProgress()`: remove bestCount/bestStart/bestEnd logic and `updateLongestDailyStreak`/`updateLongestWeeklyStreak` calls
+- Delete `updateLongestDailyStreak()`, `updateLongestWeeklyStreak()`, `walkBackScheduledDays()`
 
-### Step 4: Update GoalsViewModel to update longest streak on Activity
-After calculating daily/weekly streaks in `buildGoalWithProgress()`:
-- Compare computed streak with activity's `longestDailyStreakCount` / `longestWeeklyStreakCount`
-- If current streak is longer, update the activity fields with count + date range
+**File:** `TimeMyLifeApp/ViewModels/GoalsViewModel.swift`
 
-### Step 5: Rewrite ActivityStatsViewModel
-New metrics:
-- **Total Time** (all-time) — from `activity.allTimeTotalSeconds`
-- **Daily Average** (all-time) — total / all tracked days count
-- **Weekly Average** (all-time) — total / weeks since first entry
-- **Consistency** — tracked days / scheduled days over last 30 days
-- **Goal Success Rate** — goal met days / tracked days over last 30 days (only if daily goal exists)
-- **Longest Daily Streak** — from activity cached fields (count + date range)
-- **Longest Weekly Streak** — from activity cached fields (count + date range)
+### Step 3: Clean up `DataService`
+- `createOrUpdateTimeEntry()`: remove `allTimeTotalSeconds` increment block
+- Delete `backfillAllActivityStats()`
+- `handleActivitySync()`: remove 7 cached stat field assignments
 
-Keep 30-day trend chart. Add cumulative hours chart (all-time or 30-day cumulative).
+**File:** `TimeMyLifeApp/Services/DataService.swift`
 
-### Step 6: Update ActivityStatsDetailView UI
-- Replace old metric rows with new fields
-- Add cumulative hours chart below daily trend chart
-- Show streak date ranges (e.g., "5 days (Mar 1 – Mar 5)")
-- Hide streak rows if count is 0
+### Step 4: Remove cached fields from `Activity` model
+- Delete 7 properties: `allTimeTotalSeconds`, `longestDaily/WeeklyStreakCount/StartDate/EndDate`
+- Update `CodingKeys`, `encode(to:)`, `init(from:)` to remove these fields
 
-### Step 7: Write tests
-Create `TimeMyLifeAppTests/Unit/ViewModels/ActivityStatsViewModelTests.swift`:
-- Test all-time total, daily/weekly averages
-- Test consistency calculation
-- Test goal success rate
-- Test longest streak caching on Activity
-- Test cumulative trend data
+**File:** `TimeMyLifeApp/Models/Activity.swift`
 
-Update existing GoalsViewModelTests if needed for streak-on-activity logic.
+### Step 5: Update `ActivityStatsDetailView`
+- Header: `"All-time statistics"` → dynamic `"2026 statistics"`
+- Recent entries: scoped to current year
+
+**File:** `TimeMyLifeApp/Views/Statistics/ActivityStatsDetailView.swift`
+
+### Step 6: Update tests
+**Delete:** cached field tests (allTimeTotalSeconds increments, GoalsVM-updating-Activity streaks, backfill)
+
+**Update:** totalDuration (year-scoped), dailyAverage (÷ calendar days), weeklyAverage (÷ weeks elapsed)
+
+**Add:**
+- `test_totalDuration_scopedToCurrentYear` — previous year entries excluded
+- `test_longestDailyStreak_computedFromYearEntries`
+- `test_longestDailyStreak_zeroWhenNoDailyGoal`
+- `test_longestWeeklyStreak_computedFromYearEntries`
+- `test_longestDailyStreak_findsHistoricalBest` — past streak > current streak
+
+**File:** `TimeMyLifeAppTests/Unit/ViewModels/ActivityStatsViewModelTests.swift`
+
+### Step 7: Grep for stale references
+Search for `allTimeTotalSeconds`, `longestDailyStreakCount`, `backfillAllActivityStats`, `updateLongestDailyStreak`, `walkBackScheduledDays` — should all be zero hits.
+
+## Verification
+1. Build iOS target
+2. Run full test suite
+3. Run GoalsViewModelTests specifically to verify streak display still works
+4. Grep for removed field names
 
 ## Files to touch
-- `TimeMyLifeApp/Models/Activity.swift` — new cached fields + Codable
-- `TimeMyLifeApp/Services/DataService.swift` — update createOrUpdateTimeEntry, add backfill
-- `TimeMyLifeApp/ViewModels/GoalsViewModel.swift` — update longest streak on activity
-- `TimeMyLifeApp/ViewModels/ActivityStatsViewModel.swift` — rewrite metrics
-- `TimeMyLifeApp/Views/Statistics/ActivityStatsDetailView.swift` — new UI
-- `TimeMyLifeAppTests/Unit/ViewModels/ActivityStatsViewModelTests.swift` — new test file
+- `TimeMyLifeApp/Models/Activity.swift` — remove cached fields + Codable cleanup
+- `TimeMyLifeApp/Services/DataService.swift` — remove incremental updates + backfill
+- `TimeMyLifeApp/ViewModels/GoalsViewModel.swift` — simplify streak tracking
+- `TimeMyLifeApp/ViewModels/ActivityStatsViewModel.swift` — rewrite year-scoped
+- `TimeMyLifeApp/Views/Statistics/ActivityStatsDetailView.swift` — header text
+- `TimeMyLifeAppTests/Unit/ViewModels/ActivityStatsViewModelTests.swift` — update tests
