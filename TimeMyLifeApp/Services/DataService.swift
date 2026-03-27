@@ -245,13 +245,13 @@ public class DataService {
         }
         
         try modelContext.save()
-        
+
         // Sync to counterpart device
         Task {
             try? await syncService?.syncModel(timeEntry, type: .timeEntry, action: action)
         }
     }
-    
+
     /// Deletes a time entry
     /// - Parameter entry: TimeEntry to delete
     /// - Throws: Error if save fails
@@ -462,7 +462,7 @@ public class DataService {
                 existing.name = activity.name
                 existing.colorHex = activity.colorHex
                 existing.category = activity.category
-                
+
                 // Update scheduled days relationship
                 // Delete old scheduled days
                 for day in existing.scheduledDays {

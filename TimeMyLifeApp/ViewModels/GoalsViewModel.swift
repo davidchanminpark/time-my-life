@@ -111,6 +111,7 @@ class GoalsViewModel {
                 today: today,
                 scheduledWeekdays: scheduledWeekdays
             )
+
         case .weekly:
             let weekStart = currentWeekStart(for: today)
             currentProgress = try weeklyProgress(activityID: goal.activityID, weekStart: weekStart)

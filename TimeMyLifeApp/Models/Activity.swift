@@ -234,7 +234,7 @@ extension Activity: Codable {
         case scheduledDays
         case createdAt
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
@@ -246,7 +246,7 @@ extension Activity: Codable {
         try container.encode(scheduledDayInts, forKey: .scheduledDays)
         try container.encode(createdAt, forKey: .createdAt)
     }
-    
+
     public convenience init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let id = try container.decode(UUID.self, forKey: .id)
@@ -266,6 +266,7 @@ extension Activity: Codable {
             scheduledDays: scheduledDays,
             createdAt: createdAt
         )
+
     }
 }
 

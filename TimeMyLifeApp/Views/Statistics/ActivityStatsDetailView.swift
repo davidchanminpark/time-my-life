@@ -29,13 +29,14 @@ struct ActivityStatsDetailView: View {
                     } else if let metrics = viewModel.metrics {
                         headerCard
                         metricsCard(metrics: metrics)
+                        streaksCard(metrics: metrics)
                         trendsCard
                         recentSessionsCard
                     } else {
                         ContentUnavailableView(
                             "No Data",
                             systemImage: "chart.line.uptrend.xyaxis",
-                            description: Text("No sessions tracked in the last 30 days.")
+                            description: Text("No sessions tracked yet.")
                         )
                         .padding(.top, 60)
                     }
@@ -79,7 +80,7 @@ struct ActivityStatsDetailView: View {
                         .font(.system(.subheadline, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
-                Text("Last 30 days")
+                Text("\(Calendar.current.component(.year, from: Date())) statistics")
                     .font(.system(.caption, design: .rounded))
                     .foregroundStyle(.tertiary)
             }
@@ -108,24 +109,94 @@ struct ActivityStatsDetailView: View {
             Divider().padding(.leading, 16)
             metricRow(label: "Weekly Average", value: formatDuration(metrics.weeklyAverage))
             Divider().padding(.leading, 16)
-            metricRow(label: "Longest Session", value: formatDuration(metrics.longestSession))
-            Divider().padding(.leading, 16)
-            metricRow(label: "Shortest Session", value: formatDuration(metrics.shortestSession))
-            Divider().padding(.leading, 16)
-            metricRow(label: "Days Tracked", value: "\(metrics.trackedDays) / 30")
+            metricRow(
+                label: "Consistency (30d)",
+                value: String(format: "%.0f%%", metrics.consistency * 100),
+                valueColor: metrics.consistency >= 0.8 ? .green : metrics.consistency >= 0.5 ? .orange : .red
+            )
 
-            if let pct = metrics.goalCompletionPct {
+            if let rate = metrics.goalSuccessRate {
                 Divider().padding(.leading, 16)
                 metricRow(
-                    label: "Goal Completion",
-                    value: String(format: "%.0f%%", pct * 100),
-                    valueColor: pct >= 0.8 ? .green : pct >= 0.5 ? .orange : .red
+                    label: "Goal Success Rate (30d)",
+                    value: String(format: "%.0f%%", rate * 100),
+                    valueColor: rate >= 0.8 ? .green : rate >= 0.5 ? .orange : .red
                 )
             }
 
             Spacer(minLength: 12)
         }
         .appCard()
+    }
+
+    // MARK: - Streaks
+
+    private func streaksCard(metrics: ActivityStatsViewModel.Metrics) -> some View {
+        let hasDaily = metrics.longestDailyStreakCount > 0
+        let hasWeekly = metrics.longestWeeklyStreakCount > 0
+
+        return Group {
+            if hasDaily || hasWeekly {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Longest Streaks")
+                        .font(.system(.headline, design: .rounded, weight: .semibold))
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                        .padding(.bottom, 8)
+
+                    Divider()
+
+                    if hasDaily {
+                        streakRow(
+                            label: "Daily",
+                            count: metrics.longestDailyStreakCount,
+                            startDate: metrics.longestDailyStreakStartDate,
+                            endDate: metrics.longestDailyStreakEndDate,
+                            unit: "day"
+                        )
+                    }
+
+                    if hasDaily && hasWeekly {
+                        Divider().padding(.leading, 16)
+                    }
+
+                    if hasWeekly {
+                        streakRow(
+                            label: "Weekly",
+                            count: metrics.longestWeeklyStreakCount,
+                            startDate: metrics.longestWeeklyStreakStartDate,
+                            endDate: metrics.longestWeeklyStreakEndDate,
+                            unit: "week"
+                        )
+                    }
+
+                    Spacer(minLength: 12)
+                }
+                .appCard()
+            }
+        }
+    }
+
+    private func streakRow(label: String, count: Int, startDate: Date?, endDate: Date?, unit: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(label)
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("\(count) \(count == 1 ? unit : unit + "s")")
+                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                    .monospacedDigit()
+            }
+
+            if let start = startDate, let end = endDate {
+                Text(formatDateRange(start: start, end: end))
+                    .font(.system(.caption, design: .rounded))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 11)
     }
 
     private func metricRow(label: String, value: String, valueColor: Color = .primary) -> some View {
@@ -252,6 +323,15 @@ struct ActivityStatsDetailView: View {
         if h > 0 { return "\(h)h" }
         if m > 0 { return "\(m)m" }
         return "—"
+    }
+
+    private func formatDateRange(start: Date, end: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        let startStr = formatter.string(from: start)
+        let endStr = formatter.string(from: end)
+        if startStr == endStr { return startStr }
+        return "\(startStr) – \(endStr)"
     }
 }
 
