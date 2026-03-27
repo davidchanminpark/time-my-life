@@ -278,6 +278,58 @@ final class ActivityStatsViewModelTests: XCTestCase {
         XCTAssertNotNil(metrics.longestWeeklyStreakEndDate)
     }
 
+    // MARK: - Period Bar Data
+
+    func test_periodBarData_groupsByMonth() async throws {
+        let a = try makeActivity()
+        // Seed entries in current month and last month
+        try seedEntry(activityID: a.id, daysAgo: 0, seconds: 3600)   // this month
+        try seedEntry(activityID: a.id, daysAgo: 1, seconds: 1800)   // this month
+        try seedEntry(activityID: a.id, daysAgo: 35, seconds: 7200)  // ~last month
+
+        let sut = makeSut(activity: a)
+        await sut.loadStats()
+
+        // Should be in monthly mode (we're in March = month 3 >= 3)
+        let today = cal.startOfDay(for: Date())
+        let monthsInYear = cal.component(.month, from: today)
+        if monthsInYear >= 3 {
+            XCTAssertFalse(sut.periodBarUsesWeeks)
+            XCTAssertEqual(sut.periodBarData.count, 12) // last 12 months
+
+            // Last bar (current month) should include today's entries
+            let lastBar = sut.periodBarData.last!
+            XCTAssertGreaterThan(lastBar.hours, 0)
+        }
+    }
+
+    func test_periodBarData_emptyWhenNoEntries() async throws {
+        let a = try makeActivity()
+
+        let sut = makeSut(activity: a)
+        await sut.loadStats()
+
+        // Bars exist (12 periods) but all zero
+        let nonZeroBars = sut.periodBarData.filter { $0.hours > 0 }
+        XCTAssertTrue(nonZeroBars.isEmpty)
+    }
+
+    func test_periodBarData_fallsBackToWeeksWhenLessThan3Months() async throws {
+        // This test only validates behavior in Jan/Feb; skip otherwise
+        let today = cal.startOfDay(for: Date())
+        let monthsInYear = cal.component(.month, from: today)
+        guard monthsInYear < 3 else { return } // only runs in Jan/Feb
+
+        let a = try makeActivity()
+        try seedEntry(activityID: a.id, daysAgo: 0, seconds: 3600)
+
+        let sut = makeSut(activity: a)
+        await sut.loadStats()
+
+        XCTAssertTrue(sut.periodBarUsesWeeks)
+        XCTAssertEqual(sut.periodBarData.count, 12) // last 12 weeks
+    }
+
     func test_longestWeeklyStreak_zeroWhenNoWeeklyGoal() async throws {
         let a = try makeActivity()
         for weeksAgo in 0...2 {

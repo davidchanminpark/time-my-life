@@ -53,12 +53,9 @@ enum StatsChartYAxis {
         let hourStep = max(1, top / 5)
         var hours: [Double] = [0]
         var h = hourStep
-        while h < top {
+        while h <= top {
             hours.append(Double(h))
             h += hourStep
-        }
-        if hours.last != Double(top) {
-            hours.append(Double(top))
         }
         return hours
     }
