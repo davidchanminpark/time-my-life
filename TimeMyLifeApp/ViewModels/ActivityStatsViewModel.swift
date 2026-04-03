@@ -181,7 +181,7 @@ class ActivityStatsViewModel {
                 let target = TimeInterval(wGoal.targetSeconds)
                 var weekTotals: [Date: TimeInterval] = [:]
                 for entry in yearNonZero {
-                    let ws = weekStart(for: entry.date, calendar: cal)
+                    let ws = StatsHelpers.weekStart(for: entry.date, calendar: cal)
                     weekTotals[ws, default: 0] += entry.totalDuration
                 }
                 let sortedWeeks = weekTotals.keys.sorted()
@@ -278,7 +278,7 @@ class ActivityStatsViewModel {
                 // Weekly mode: last 12 weeks from today
                 periodBarUsesWeeks = true
                 let twelveWeeksAgo = cal.date(byAdding: .weekOfYear, value: -11, to: today)!
-                let barStart = weekStart(for: twelveWeeksAgo, calendar: cal)
+                let barStart = StatsHelpers.weekStart(for: twelveWeeksAgo, calendar: cal)
 
                 // Fetch entries before yearStart if the 12-week window extends into last year
                 var barEntries = yearNonZero
@@ -291,13 +291,13 @@ class ActivityStatsViewModel {
 
                 var durationByWeek: [Date: TimeInterval] = [:]
                 for entry in barEntries {
-                    let ws = weekStart(for: entry.date, calendar: cal)
+                    let ws = StatsHelpers.weekStart(for: entry.date, calendar: cal)
                     durationByWeek[ws, default: 0] += entry.totalDuration
                 }
                 var bars: [TrendPoint] = []
                 for offset in stride(from: -11, through: 0, by: 1) {
                     guard let weekDate = cal.date(byAdding: .weekOfYear, value: offset, to: today) else { continue }
-                    let ws = weekStart(for: weekDate, calendar: cal)
+                    let ws = StatsHelpers.weekStart(for: weekDate, calendar: cal)
                     let hours = (durationByWeek[ws] ?? 0) / 3600
                     bars.append(TrendPoint(date: ws, hours: hours))
                 }
@@ -315,10 +315,4 @@ class ActivityStatsViewModel {
         }
     }
 
-    // MARK: - Helpers
-
-    private func weekStart(for date: Date, calendar: Calendar) -> Date {
-        let weekday = calendar.component(.weekday, from: date)
-        return calendar.date(byAdding: .day, value: -(weekday - 1), to: calendar.startOfDay(for: date)) ?? date
-    }
 }

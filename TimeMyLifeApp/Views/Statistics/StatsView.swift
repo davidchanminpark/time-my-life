@@ -262,7 +262,7 @@ struct StatsView: View {
         .appCard()
     }
 
-    private func activityRow(stat: StatsViewModel.ActivityStat, rank: Int) -> some View {
+    private func activityRow(stat: ActivityStat, rank: Int) -> some View {
         HStack(spacing: 12) {
             Text("\(rank)")
                 .font(.system(.caption2, design: .rounded, weight: .semibold))
