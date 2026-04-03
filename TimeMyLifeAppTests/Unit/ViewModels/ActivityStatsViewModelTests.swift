@@ -27,9 +27,10 @@ final class ActivityStatsViewModelTests: XCTestCase {
 
     private func makeActivity(
         name: String = "Test",
-        scheduledDays: [Int] = [1, 2, 3, 4, 5, 6, 7]
+        scheduledDays: [Int] = [1, 2, 3, 4, 5, 6, 7],
+        createdAt: Date = Date()
     ) throws -> Activity {
-        let a = Activity(name: name, colorHex: "#BFC8FF", category: "", scheduledDays: scheduledDays)
+        let a = Activity(name: name, colorHex: "#BFC8FF", category: "", scheduledDays: scheduledDays, createdAt: createdAt)
         try dataService.createActivity(a)
         return a
     }
@@ -281,7 +282,9 @@ final class ActivityStatsViewModelTests: XCTestCase {
     // MARK: - Period Bar Data
 
     func test_periodBarData_groupsByMonth() async throws {
-        let a = try makeActivity()
+        // Activity must be created >= 3 months ago for monthly mode
+        let fourMonthsAgo = cal.date(byAdding: .month, value: -4, to: Date())!
+        let a = try makeActivity(createdAt: fourMonthsAgo)
         // Seed entries in current month and last month
         try seedEntry(activityID: a.id, daysAgo: 0, seconds: 3600)   // this month
         try seedEntry(activityID: a.id, daysAgo: 1, seconds: 1800)   // this month
@@ -290,17 +293,12 @@ final class ActivityStatsViewModelTests: XCTestCase {
         let sut = makeSut(activity: a)
         await sut.loadStats()
 
-        // Should be in monthly mode (we're in March = month 3 >= 3)
-        let today = cal.startOfDay(for: Date())
-        let monthsInYear = cal.component(.month, from: today)
-        if monthsInYear >= 3 {
-            XCTAssertFalse(sut.periodBarUsesWeeks)
-            XCTAssertEqual(sut.periodBarData.count, 12) // last 12 months
+        XCTAssertFalse(sut.periodBarUsesWeeks)
+        XCTAssertEqual(sut.periodBarData.count, 12) // last 12 months
 
-            // Last bar (current month) should include today's entries
-            let lastBar = sut.periodBarData.last!
-            XCTAssertGreaterThan(lastBar.hours, 0)
-        }
+        // Last bar (current month) should include today's entries
+        let lastBar = sut.periodBarData.last!
+        XCTAssertGreaterThan(lastBar.hours, 0)
     }
 
     func test_periodBarData_emptyWhenNoEntries() async throws {
@@ -315,11 +313,7 @@ final class ActivityStatsViewModelTests: XCTestCase {
     }
 
     func test_periodBarData_fallsBackToWeeksWhenLessThan3Months() async throws {
-        // This test only validates behavior in Jan/Feb; skip otherwise
-        let today = cal.startOfDay(for: Date())
-        let monthsInYear = cal.component(.month, from: today)
-        guard monthsInYear < 3 else { return } // only runs in Jan/Feb
-
+        // Freshly created activity has < 3 months of data → weekly mode
         let a = try makeActivity()
         try seedEntry(activityID: a.id, daysAgo: 0, seconds: 3600)
 
