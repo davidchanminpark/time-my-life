@@ -14,6 +14,7 @@ struct YearlyStatsView: View {
     @State private var viewModel: YearlyStatsViewModel
     @State private var shareItem: ShareableImage?
     @State private var isRendering = false
+    @State private var showAllActivities = false
 
     init(dataService: DataService) {
         self.dataService = dataService
@@ -159,7 +160,11 @@ struct YearlyStatsView: View {
     // MARK: - Top Activities
 
     private var topActivitiesCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let displayedStats = showAllActivities
+            ? viewModel.activityStats
+            : Array(viewModel.activityStats.prefix(5))
+
+        return VStack(alignment: .leading, spacing: 0) {
             Text("Top Activities")
                 .font(.system(.headline, design: .rounded, weight: .semibold))
                 .padding(.horizontal, 16)
@@ -168,8 +173,8 @@ struct YearlyStatsView: View {
 
             Divider()
 
-            ForEach(viewModel.topActivities.indices, id: \.self) { i in
-                let stat = viewModel.topActivities[i]
+            ForEach(displayedStats.indices, id: \.self) { i in
+                let stat = displayedStats[i]
                 HStack(spacing: 12) {
                     Text("#\(i + 1)")
                         .font(.system(.caption, design: .rounded, weight: .semibold))
@@ -178,7 +183,7 @@ struct YearlyStatsView: View {
                         .padding(.leading, 8)
 
                     Circle()
-                        .fill(stat.activity.color())
+                        .fill(stat.color)
                         .frame(width: 11, height: 11)
 
                     Text(stat.activity.name)
@@ -193,8 +198,28 @@ struct YearlyStatsView: View {
                 }
                 .padding(.vertical, 11)
 
-                if i < viewModel.topActivities.count - 1 {
+                if i < displayedStats.count - 1 {
                     Divider().padding(.leading, 52)
+                }
+            }
+
+            if viewModel.activityStats.count > 5 {
+                Divider()
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showAllActivities.toggle()
+                    }
+                } label: {
+                    HStack {
+                        Text(showAllActivities ? "Show Less" : "Show All (\(viewModel.activityStats.count))")
+                            .font(.system(.subheadline, design: .rounded, weight: .medium))
+                        Image(systemName: showAllActivities ? "chevron.up" : "chevron.down")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(Color.appAccent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
                 }
             }
 
