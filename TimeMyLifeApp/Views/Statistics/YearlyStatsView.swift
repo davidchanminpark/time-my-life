@@ -180,12 +180,15 @@ struct YearlyStatsView: View {
             .chartXScale(domain: weekdayLabels)
             .chartLegend(.hidden)
             .chartYAxis {
-                AxisMarks { value in
+                AxisMarks(values: viewModel.weekdayBarYAxisTickHours) { value in
                     AxisGridLine()
                     AxisValueLabel {
                         if let h = value.as(Double.self) {
-                            Text(String(format: "%.0fh", h))
-                                .font(.caption2)
+                            Text(StatsChartYAxis.yAxisLabel(
+                                hours: h,
+                                useMinuteLabels: viewModel.weekdayBarUseMinuteYAxis
+                            ))
+                            .font(.caption2)
                         }
                     }
                 }
