@@ -33,16 +33,6 @@ class StatsViewModel {
         var useWeeklyBars: Bool { rawValue > 7 }
     }
 
-    struct ActivityStat: Identifiable {
-        let id: UUID
-        let activity: Activity
-        let totalDuration: TimeInterval
-        let percentage: Double          // 0.0–1.0
-
-        var color: Color { activity.color() }
-        var hours: Double { totalDuration / 3600 }
-    }
-
     /// One segment per (period × activity) for stacked bars; `stackOrder` matches `activityStats` order (0 = bottom of stack).
     struct StackedBarSegment: Identifiable {
         var id: String { "\(periodStart.timeIntervalSince1970)-\(activityID.uuidString)" }
@@ -108,29 +98,12 @@ class StatsViewModel {
             let entries = try dataService.fetchTimeEntries(from: startDate, to: today)
 
             // --- Activity totals (for pie chart + list) ---
-            var activityTotals: [UUID: TimeInterval] = [:]
-            var daysWithData = Set<Date>()
-            for entry in entries where entry.totalDuration > 0 {
-                activityTotals[entry.activityID, default: 0] += entry.totalDuration
-                daysWithData.insert(entry.date)
-            }
-
-            let grandTotal = activityTotals.values.reduce(0, +)
-            totalHours = grandTotal / 3600
-            trackedDays = daysWithData.count
+            let result = StatsHelpers.buildActivityStats(from: entries, activities: activities)
+            activityStats = result.stats
+            totalHours = result.totalHours
+            trackedDays = result.trackedDays
 
             let activityMap = Dictionary(uniqueKeysWithValues: activities.map { ($0.id, $0) })
-
-            activityStats = activityTotals.compactMap { (id, duration) -> ActivityStat? in
-                guard let activity = activityMap[id], duration > 0 else { return nil }
-                return ActivityStat(
-                    id: id,
-                    activity: activity,
-                    totalDuration: duration,
-                    percentage: grandTotal > 0 ? duration / grandTotal : 0
-                )
-            }
-            .sorted { $0.totalDuration > $1.totalDuration }
 
             // --- Stacked bar chart (daily or weekly) ---
             let order = activityStats.map(\.id)
@@ -169,11 +142,6 @@ class StatsViewModel {
         maxStackedBarHours = sums.values.max() ?? 0
     }
 
-    private func weekStart(for date: Date, cal: Calendar) -> Date {
-        let weekday = cal.component(.weekday, from: date)   // 1=Sun
-        return cal.date(byAdding: .day, value: -(weekday - 1), to: date) ?? date
-    }
-
     private func buildStackedWeeklySegments(
         entries: [TimeEntry],
         startDate: Date,
@@ -189,12 +157,12 @@ class StatsViewModel {
 
         var byWeek: [Date: [UUID: Double]] = [:]
         for entry in entries where entry.totalDuration > 0 {
-            let weekStart = weekStart(for: entry.date, cal: cal)
+            let weekStart = StatsHelpers.weekStart(for: entry.date, calendar: cal)
             byWeek[weekStart, default: [:]][entry.activityID, default: 0] += entry.totalDuration / 3600
         }
 
-        let firstWeek = weekStart(for: startDate, cal: cal)
-        let lastWeek = weekStart(for: today, cal: cal)
+        let firstWeek = StatsHelpers.weekStart(for: startDate, calendar: cal)
+        let lastWeek = StatsHelpers.weekStart(for: today, calendar: cal)
 
         var weeks: [Date] = []
         var w = firstWeek

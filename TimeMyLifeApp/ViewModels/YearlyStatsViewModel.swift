@@ -13,16 +13,6 @@ class YearlyStatsViewModel {
 
     // MARK: - Types
 
-    struct ActivityStat: Identifiable {
-        let id: UUID
-        let activity: Activity
-        let totalDuration: TimeInterval
-        let percentage: Double
-
-        var color: Color { activity.color() }
-        var hours: Double { totalDuration / 3600 }
-    }
-
     struct TopActivity: Identifiable {
         let id: UUID
         let activity: Activity
@@ -117,32 +107,19 @@ class YearlyStatsViewModel {
             let activities = try dataService.fetchActivities()
             let entries = try dataService.fetchTimeEntries(from: yearStart, to: yearEnd)
 
-            // Aggregate
-            var activityTotals: [UUID: TimeInterval] = [:]
-            var entriesByActivity: [UUID: [TimeEntry]] = [:]
+            // Aggregate via shared helper
+            let result = StatsHelpers.buildActivityStats(from: entries, activities: activities)
+            activityStats = result.stats
+            totalHours = result.totalHours
+            activitiesCount = result.stats.count
 
+            // Build per-activity lookup for streaks
+            var entriesByActivity: [UUID: [TimeEntry]] = [:]
             for entry in entries where entry.totalDuration > 0 {
-                activityTotals[entry.activityID, default: 0] += entry.totalDuration
                 entriesByActivity[entry.activityID, default: []].append(entry)
             }
 
-            let grandTotal = activityTotals.values.reduce(0, +)
-            totalHours = grandTotal / 3600
-            activitiesCount = activityTotals.count
-
             let activityMap = Dictionary(uniqueKeysWithValues: activities.map { ($0.id, $0) })
-
-            // Activity stats for pie chart
-            activityStats = activityTotals.compactMap { (id, duration) -> ActivityStat? in
-                guard let activity = activityMap[id], duration > 0 else { return nil }
-                return ActivityStat(
-                    id: id,
-                    activity: activity,
-                    totalDuration: duration,
-                    percentage: grandTotal > 0 ? duration / grandTotal : 0
-                )
-            }
-            .sorted { $0.totalDuration > $1.totalDuration }
 
             // Top activities (for share card)
             topActivities = activityStats.prefix(5).map {
@@ -151,7 +128,7 @@ class YearlyStatsViewModel {
 
             // Longest streak per activity this year
             var streaks: [ActivityStreak] = []
-            for act in activities where activityTotals[act.id] != nil {
+            for act in activities where entriesByActivity[act.id] != nil {
                 let actEntries = entriesByActivity[act.id] ?? []
                 let s = longestStreak(from: actEntries, yearStart: yearStart, yearEnd: yearEnd)
                 if s > 0 { streaks.append(ActivityStreak(activity: act, longestStreak: s)) }
