@@ -13,6 +13,16 @@ class YearlyStatsViewModel {
 
     // MARK: - Types
 
+    struct ActivityStat: Identifiable {
+        let id: UUID
+        let activity: Activity
+        let totalDuration: TimeInterval
+        let percentage: Double
+
+        var color: Color { activity.color() }
+        var hours: Double { totalDuration / 3600 }
+    }
+
     struct TopActivity: Identifiable {
         let id: UUID
         let activity: Activity
@@ -25,19 +35,25 @@ class YearlyStatsViewModel {
         let longestStreak: Int
     }
 
+    struct CumulativePoint: Identifiable {
+        var id: String { "\(date.timeIntervalSince1970)-\(activityID.uuidString)" }
+        let date: Date
+        let activityID: UUID
+        let hours: Double
+        let color: Color
+        let activityName: String
+    }
+
     // MARK: - State
 
     var selectedYear: Int
     var totalHours: Double = 0
-    var mostActiveDay: (date: Date, hours: Double)? = nil
     var activitiesCount: Int = 0
+    var activityStats: [ActivityStat] = []
     var topActivities: [TopActivity] = []
     var activityStreaks: [ActivityStreak] = []
-    /// Index 0 = January, 11 = December
-    var monthlyTotals: [Double] = Array(repeating: 0, count: 12)
+    var cumulativeData: [CumulativePoint] = []
     var isLoading = false
-
-    var maxMonthlyHours: Double { monthlyTotals.max() ?? 1 }
 
     /// Populated from `DataService.yearsWithTrackingHistory()` (earliest tracking through current year).
     var availableYears: [Int] = []
@@ -89,37 +105,46 @@ class YearlyStatsViewModel {
             let entries = try dataService.fetchTimeEntries(from: yearStart, to: yearEnd)
 
             // Aggregate
-            var activityTotals: [UUID: Double] = [:]
-            var dailyTotals: [Date: Double] = [:]
-            var monthly: [Double] = Array(repeating: 0, count: 12)
+            var activityTotals: [UUID: TimeInterval] = [:]
             var entriesByActivity: [UUID: [TimeEntry]] = [:]
 
             for entry in entries where entry.totalDuration > 0 {
-                let h = entry.totalDuration / 3600
-                activityTotals[entry.activityID, default: 0] += h
-                dailyTotals[entry.date, default: 0] += h
-                let month = cal.component(.month, from: entry.date) - 1   // 0-based
-                monthly[month] += h
+                activityTotals[entry.activityID, default: 0] += entry.totalDuration
                 entriesByActivity[entry.activityID, default: []].append(entry)
             }
 
-            totalHours = activityTotals.values.reduce(0, +)
-            monthlyTotals = monthly
+            let grandTotal = activityTotals.values.reduce(0, +)
+            totalHours = grandTotal / 3600
             activitiesCount = activityTotals.count
-            mostActiveDay = dailyTotals.max(by: { $0.value < $1.value }).map { ($0.key, $0.value) }
 
             let activityMap = Dictionary(uniqueKeysWithValues: activities.map { ($0.id, $0) })
 
-            topActivities = activityTotals
-                .compactMap { id, h -> TopActivity? in
-                    guard let act = activityMap[id] else { return nil }
-                    return TopActivity(id: id, activity: act, hours: h)
-                }
-                .sorted { $0.hours > $1.hours }
-                .prefix(5)
-                .map { $0 }
+            // Activity stats for pie chart
+            activityStats = activityTotals.compactMap { (id, duration) -> ActivityStat? in
+                guard let activity = activityMap[id], duration > 0 else { return nil }
+                return ActivityStat(
+                    id: id,
+                    activity: activity,
+                    totalDuration: duration,
+                    percentage: grandTotal > 0 ? duration / grandTotal : 0
+                )
+            }
+            .sorted { $0.totalDuration > $1.totalDuration }
 
-            // Longest streak per activity this year — use pre-grouped dict (no extra scans)
+            // Top activities (for share card)
+            topActivities = activityStats.prefix(5).map {
+                TopActivity(id: $0.id, activity: $0.activity, hours: $0.hours)
+            }
+
+            // Cumulative hours line chart data
+            buildCumulativeData(
+                entries: entries,
+                yearStart: yearStart,
+                yearEnd: yearEnd,
+                activityMap: activityMap
+            )
+
+            // Longest streak per activity this year
             var streaks: [ActivityStreak] = []
             for act in activities where activityTotals[act.id] != nil {
                 let actEntries = entriesByActivity[act.id] ?? []
@@ -131,6 +156,50 @@ class YearlyStatsViewModel {
         } catch {
             print("YearlyStatsViewModel error: \(error)")
         }
+    }
+
+    // MARK: - Cumulative Data
+
+    private func buildCumulativeData(
+        entries: [TimeEntry],
+        yearStart: Date,
+        yearEnd: Date,
+        activityMap: [UUID: Activity]
+    ) {
+        // Group entries by activity, then by date
+        var byActivityDate: [UUID: [Date: Double]] = [:]
+        for entry in entries where entry.totalDuration > 0 {
+            byActivityDate[entry.activityID, default: [:]][entry.date, default: 0] += entry.totalDuration / 3600
+        }
+
+        // Only include top activities (by total hours) to keep chart readable
+        let topIDs = activityStats.prefix(5).map(\.id)
+
+        // Build sorted list of all unique dates in the year that have data
+        let allDates = Set(entries.map(\.date)).sorted()
+        guard !allDates.isEmpty else {
+            cumulativeData = []
+            return
+        }
+
+        var points: [CumulativePoint] = []
+        for activityID in topIDs {
+            guard let act = activityMap[activityID] else { continue }
+            let dateMap = byActivityDate[activityID] ?? [:]
+            var cumulative: Double = 0
+            for date in allDates {
+                cumulative += dateMap[date] ?? 0
+                points.append(CumulativePoint(
+                    date: date,
+                    activityID: activityID,
+                    hours: cumulative,
+                    color: act.color(),
+                    activityName: act.name
+                ))
+            }
+        }
+
+        cumulativeData = points
     }
 
     // MARK: - Streak Calculation

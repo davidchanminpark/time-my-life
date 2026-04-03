@@ -6,6 +6,7 @@
 import SwiftUI
 import SwiftData
 import UIKit
+import Charts
 
 struct YearlyStatsView: View {
     let dataService: DataService
@@ -32,11 +33,12 @@ struct YearlyStatsView: View {
                         emptyState
                     } else {
                         heroCard
+                        pieChartCard
+                        cumulativeChartCard
                         topActivitiesCard
                         if !viewModel.activityStreaks.isEmpty {
                             streaksCard
                         }
-                        heatmapCard
                     }
                 }
                 .padding(.horizontal)
@@ -82,35 +84,12 @@ struct YearlyStatsView: View {
     // MARK: - Hero Card
 
     private var heroCard: some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 0) {
-                heroItem(value: String(format: "%.0f", viewModel.totalHours), label: "Total Hours")
-                Divider().frame(height: 40)
-                heroItem(value: "\(viewModel.activitiesCount)", label: "Activities")
-                if let most = viewModel.mostActiveDay {
-                    Divider().frame(height: 40)
-                    heroItem(
-                        value: String(format: "%.1fh", most.hours),
-                        label: "Best Day"
-                    )
-                }
-            }
-            .padding(.vertical, 14)
-
-            if let most = viewModel.mostActiveDay {
-                HStack {
-                    Image(systemName: "star.fill")
-                        .foregroundStyle(.yellow)
-                        .font(.system(.caption, design: .rounded))
-                    Text("Most active: \(most.date.formatted(.dateTime.month(.wide).day()))")
-                        .font(.system(.caption, design: .rounded))
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 8)
-            }
+        HStack(spacing: 0) {
+            heroItem(value: String(format: "%.0f", viewModel.totalHours), label: "Total Hours")
+            Divider().frame(height: 40)
+            heroItem(value: "\(viewModel.activitiesCount)", label: "Activities")
         }
+        .padding(.vertical, 14)
         .appCard()
     }
 
@@ -124,6 +103,119 @@ struct YearlyStatsView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Pie (Donut) Chart
+
+    private var pieChartCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Time Distribution")
+                .font(.system(.headline, design: .rounded, weight: .semibold))
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+
+            HStack(alignment: .center, spacing: 16) {
+                Chart(viewModel.activityStats) { stat in
+                    SectorMark(
+                        angle: .value("Duration", stat.totalDuration),
+                        innerRadius: .ratio(0.54),
+                        angularInset: 1.5
+                    )
+                    .cornerRadius(4)
+                    .foregroundStyle(stat.color)
+                }
+                .frame(width: 140, height: 140)
+                .chartLegend(.hidden)
+
+                VStack(alignment: .leading, spacing: 7) {
+                    ForEach(viewModel.activityStats.prefix(7)) { stat in
+                        HStack(spacing: 7) {
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(stat.color)
+                                .frame(width: 11, height: 11)
+                            Text(stat.activity.name)
+                                .font(.system(.caption, design: .rounded))
+                                .lineLimit(1)
+                            Spacer(minLength: 4)
+                            Text(String(format: "%.0f%%", stat.percentage * 100))
+                                .font(.system(.caption, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
+                    }
+                    if viewModel.activityStats.count > 7 {
+                        Text("+\(viewModel.activityStats.count - 7) more")
+                            .font(.system(.caption2, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
+        }
+        .appCard()
+    }
+
+    // MARK: - Cumulative Hours Chart
+
+    private var cumulativeChartCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Cumulative Hours")
+                .font(.system(.headline, design: .rounded, weight: .semibold))
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+
+            Chart(viewModel.cumulativeData) { point in
+                LineMark(
+                    x: .value("Date", point.date),
+                    y: .value("Hours", point.hours)
+                )
+                .foregroundStyle(point.color)
+                .foregroundStyle(by: .value("Activity", point.activityName))
+            }
+            .chartForegroundStyleScale(range: viewModel.activityStats.prefix(5).map(\.color))
+            .chartLegend(.hidden)
+            .chartXAxis {
+                AxisMarks(values: .automatic) { _ in
+                    AxisGridLine()
+                    AxisValueLabel(format: .dateTime.month(.abbreviated))
+                }
+            }
+            .chartYAxis {
+                AxisMarks { value in
+                    AxisGridLine()
+                    AxisValueLabel {
+                        if let h = value.as(Double.self) {
+                            Text(String(format: "%.0fh", h))
+                                .font(.caption2)
+                        }
+                    }
+                }
+            }
+            .frame(height: 200)
+            .padding(.horizontal, 16)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(viewModel.activityStats.prefix(5)) { stat in
+                        HStack(spacing: 5) {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(stat.color)
+                                .frame(width: 9, height: 9)
+                            Text(stat.activity.name)
+                                .font(.system(.caption2, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                }
+                .padding(.horizontal, 4)
+            }
+            .padding(.horizontal, 16)
+        }
+        .padding(.bottom, 16)
+        .appCard()
     }
 
     // MARK: - Top Activities
@@ -215,48 +307,6 @@ struct YearlyStatsView: View {
             }
 
             Spacer(minLength: 8)
-        }
-        .appCard()
-    }
-
-    // MARK: - Monthly Heatmap
-
-    private var heatmapCard: some View {
-        let monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-        let maxH = max(viewModel.maxMonthlyHours, 1)
-
-        return VStack(alignment: .leading, spacing: 12) {
-            Text("Monthly Activity")
-                .font(.system(.headline, design: .rounded, weight: .semibold))
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 12) {
-                ForEach(0..<12, id: \.self) { month in
-                    let hours = viewModel.monthlyTotals[month]
-                    let intensity = hours / maxH
-
-                    VStack(spacing: 4) {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.appAccent.opacity(max(0.08, intensity * 0.85)))
-                            .frame(height: 48)
-                            .overlay {
-                                if hours > 0 {
-                                    Text(String(format: "%.0fh", hours))
-                                        .font(.system(.caption2, design: .rounded, weight: .semibold))
-                                        .foregroundStyle(intensity > 0.5 ? .white : Color.appAccent)
-                                }
-                            }
-
-                        Text(monthNames[month])
-                            .font(.system(.caption2, design: .rounded))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 16)
         }
         .appCard()
     }
