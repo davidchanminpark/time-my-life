@@ -34,7 +34,6 @@ struct YearlyStatsView: View {
                     } else {
                         heroCard
                         pieChartCard
-                        cumulativeChartCard
                         topActivitiesCard
                         if !viewModel.activityStreaks.isEmpty {
                             streaksCard
@@ -154,67 +153,6 @@ struct YearlyStatsView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 16)
         }
-        .appCard()
-    }
-
-    // MARK: - Cumulative Hours Chart
-
-    private var cumulativeChartCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Cumulative Hours")
-                .font(.system(.headline, design: .rounded, weight: .semibold))
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-
-            Chart(viewModel.cumulativeData) { point in
-                LineMark(
-                    x: .value("Date", point.date),
-                    y: .value("Hours", point.hours)
-                )
-                .foregroundStyle(point.color)
-                .foregroundStyle(by: .value("Activity", point.activityName))
-            }
-            .chartForegroundStyleScale(range: viewModel.activityStats.prefix(5).map(\.color))
-            .chartLegend(.hidden)
-            .chartXAxis {
-                AxisMarks(values: .automatic) { _ in
-                    AxisGridLine()
-                    AxisValueLabel(format: .dateTime.month(.abbreviated))
-                }
-            }
-            .chartYAxis {
-                AxisMarks { value in
-                    AxisGridLine()
-                    AxisValueLabel {
-                        if let h = value.as(Double.self) {
-                            Text(String(format: "%.0fh", h))
-                                .font(.caption2)
-                        }
-                    }
-                }
-            }
-            .frame(height: 200)
-            .padding(.horizontal, 16)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(viewModel.activityStats.prefix(5)) { stat in
-                        HStack(spacing: 5) {
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(stat.color)
-                                .frame(width: 9, height: 9)
-                            Text(stat.activity.name)
-                                .font(.system(.caption2, design: .rounded))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                    }
-                }
-                .padding(.horizontal, 4)
-            }
-            .padding(.horizontal, 16)
-        }
-        .padding(.bottom, 16)
         .appCard()
     }
 

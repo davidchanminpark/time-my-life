@@ -126,20 +126,6 @@ final class YearlyStatsViewModelTests: XCTestCase {
         XCTAssertEqual(sut.activityStats.last?.activity.name, "Low")
     }
 
-    func testCumulativeData_accumulatesCorrectly() async throws {
-        let a = Activity(name: "Test", colorHex: "#BFC8FF", category: "", scheduledDays: [1,2,3,4,5,6,7])
-        try dataService.createActivity(a)
-        try dataService.createOrUpdateTimeEntry(activityID: a.id, date: date(month: 1, day: 1), duration: 3600) // 1h
-        try dataService.createOrUpdateTimeEntry(activityID: a.id, date: date(month: 1, day: 2), duration: 7200) // 2h
-
-        await sut.loadYear(testYear)
-
-        let points = sut.cumulativeData.filter { $0.activityID == a.id }.sorted { $0.date < $1.date }
-        XCTAssertEqual(points.count, 2)
-        XCTAssertEqual(points[0].hours, 1.0, accuracy: 0.001)
-        XCTAssertEqual(points[1].hours, 3.0, accuracy: 0.001) // cumulative: 1 + 2
-    }
-
     func testEmptyYear_showsZeros() async throws {
         await sut.loadYear(testYear)
 
@@ -147,7 +133,6 @@ final class YearlyStatsViewModelTests: XCTestCase {
         XCTAssertEqual(sut.activitiesCount, 0)
         XCTAssertTrue(sut.topActivities.isEmpty)
         XCTAssertTrue(sut.activityStats.isEmpty)
-        XCTAssertTrue(sut.cumulativeData.isEmpty)
         XCTAssertTrue(sut.activityStreaks.isEmpty)
     }
 }
