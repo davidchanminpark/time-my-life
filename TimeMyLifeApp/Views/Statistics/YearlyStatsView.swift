@@ -176,10 +176,10 @@ struct YearlyStatsView: View {
             ForEach(displayedStats.indices, id: \.self) { i in
                 let stat = displayedStats[i]
                 HStack(spacing: 12) {
-                    Text("#\(i + 1)")
+                    Text("\(i + 1)")
                         .font(.system(.caption, design: .rounded, weight: .semibold))
                         .foregroundStyle(.secondary)
-                        .frame(width: 28, alignment: .center)
+                        .frame(width: 24, alignment: .trailing)
                         .padding(.leading, 8)
 
                     Circle()
