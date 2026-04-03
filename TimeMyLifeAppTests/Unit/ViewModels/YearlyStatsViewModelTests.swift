@@ -134,5 +134,24 @@ final class YearlyStatsViewModelTests: XCTestCase {
         XCTAssertTrue(sut.topActivities.isEmpty)
         XCTAssertTrue(sut.activityStats.isEmpty)
         XCTAssertTrue(sut.activityStreaks.isEmpty)
+        XCTAssertTrue(sut.weekdayBarSegments.isEmpty)
+    }
+
+    func testWeekdayBreakdown_calculatesAverageHours() async throws {
+        let a = Activity(name: "Test", colorHex: "#BFC8FF", category: "", scheduledDays: [1,2,3,4,5,6,7])
+        try dataService.createActivity(a)
+
+        // 2025-01-06 is a Monday (weekday 2), 2025-01-13 is also Monday
+        try dataService.createOrUpdateTimeEntry(activityID: a.id, date: date(month: 1, day: 6), duration: 3600)  // 1h
+        try dataService.createOrUpdateTimeEntry(activityID: a.id, date: date(month: 1, day: 13), duration: 7200) // 2h
+
+        await sut.loadYear(testYear)
+
+        let mondaySegments = sut.weekdayBarSegments.filter { $0.weekday == 2 && $0.activityID == a.id }
+        XCTAssertEqual(mondaySegments.count, 1)
+        // Average of 1h and 2h across all Mondays in 2025 (52 Mondays)
+        // Total = 3h, count = 52 Mondays → avg = 3/52 ≈ 0.0577h
+        let avg = mondaySegments.first!.averageHours
+        XCTAssertEqual(avg, 3.0 / 52.0, accuracy: 0.001)
     }
 }

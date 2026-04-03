@@ -35,6 +35,7 @@ struct YearlyStatsView: View {
                     } else {
                         heroCard
                         pieChartCard
+                        weekdayBreakdownCard
                         topActivitiesCard
                         if !viewModel.activityStreaks.isEmpty {
                             streaksCard
@@ -154,6 +155,63 @@ struct YearlyStatsView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 16)
         }
+        .appCard()
+    }
+
+    // MARK: - Weekday Breakdown
+
+    private let weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+    private var weekdayBreakdownCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Weekday Averages")
+                .font(.system(.headline, design: .rounded, weight: .semibold))
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+
+            Chart(viewModel.weekdayBarSegments) { seg in
+                BarMark(
+                    x: .value("Weekday", weekdayLabels[seg.weekday - 1]),
+                    y: .value("Hours", seg.averageHours)
+                )
+                .foregroundStyle(seg.color)
+                .cornerRadius(2)
+            }
+            .chartXScale(domain: weekdayLabels)
+            .chartLegend(.hidden)
+            .chartYAxis {
+                AxisMarks { value in
+                    AxisGridLine()
+                    AxisValueLabel {
+                        if let h = value.as(Double.self) {
+                            Text(String(format: "%.0fh", h))
+                                .font(.caption2)
+                        }
+                    }
+                }
+            }
+            .frame(height: 180)
+            .padding(.horizontal, 16)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(viewModel.activityStats.prefix(5)) { stat in
+                        HStack(spacing: 5) {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(stat.color)
+                                .frame(width: 9, height: 9)
+                            Text(stat.activity.name)
+                                .font(.system(.caption2, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                }
+                .padding(.horizontal, 4)
+            }
+            .padding(.horizontal, 16)
+        }
+        .padding(.bottom, 16)
         .appCard()
     }
 

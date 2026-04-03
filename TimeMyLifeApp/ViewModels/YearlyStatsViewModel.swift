@@ -35,6 +35,15 @@ class YearlyStatsViewModel {
         let longestStreak: Int
     }
 
+    struct WeekdayBarSegment: Identifiable {
+        var id: String { "\(weekday)-\(activityID.uuidString)" }
+        let weekday: Int          // 1=Sun…7=Sat
+        let activityID: UUID
+        let averageHours: Double
+        let color: Color
+        let stackOrder: Int
+    }
+
     // MARK: - State
 
     var selectedYear: Int
@@ -43,6 +52,8 @@ class YearlyStatsViewModel {
     var activityStats: [ActivityStat] = []
     var topActivities: [TopActivity] = []
     var activityStreaks: [ActivityStreak] = []
+    var weekdayBarSegments: [WeekdayBarSegment] = []
+    var maxWeekdayBarHours: Double = 0
     var isLoading = false
 
     /// Populated from `DataService.yearsWithTrackingHistory()` (earliest tracking through current year).
@@ -135,9 +146,76 @@ class YearlyStatsViewModel {
             }
             activityStreaks = Array(streaks.sorted { $0.longestStreak > $1.longestStreak }.prefix(5))
 
+            // Weekday breakdown bar chart
+            buildWeekdayBreakdown(entries: entries, yearStart: yearStart, yearEnd: yearEnd, activityMap: activityMap)
+
         } catch {
             print("YearlyStatsViewModel error: \(error)")
         }
+    }
+
+    // MARK: - Weekday Breakdown
+
+    private func buildWeekdayBreakdown(
+        entries: [TimeEntry],
+        yearStart: Date,
+        yearEnd: Date,
+        activityMap: [UUID: Activity]
+    ) {
+        // Count how many times each weekday occurs in the year
+        var weekdayCounts: [Int: Int] = [:]  // weekday -> count
+        var d = yearStart
+        let today = cal.startOfDay(for: Date())
+        let endBound = min(yearEnd, today)
+        while d <= endBound {
+            let wd = cal.component(.weekday, from: d)
+            weekdayCounts[wd, default: 0] += 1
+            guard let next = cal.date(byAdding: .day, value: 1, to: d) else { break }
+            d = next
+        }
+
+        // Group total hours by (weekday, activityID)
+        var byWeekdayActivity: [Int: [UUID: Double]] = [:]
+        for entry in entries where entry.totalDuration > 0 {
+            let wd = cal.component(.weekday, from: entry.date)
+            byWeekdayActivity[wd, default: [:]][entry.activityID, default: 0] += entry.totalDuration / 3600
+        }
+
+        let order = activityStats.map(\.id)
+        guard !order.isEmpty else {
+            weekdayBarSegments = []
+            maxWeekdayBarHours = 0
+            return
+        }
+
+        var segments: [WeekdayBarSegment] = []
+        var maxStacked: Double = 0
+
+        for wd in 1...7 {
+            let count = Double(weekdayCounts[wd] ?? 1)
+            let actMap = byWeekdayActivity[wd] ?? [:]
+            var dayTotal: Double = 0
+            for (stackOrder, aid) in order.enumerated() {
+                let avg = (actMap[aid] ?? 0) / count
+                guard let act = activityMap[aid] else { continue }
+                segments.append(WeekdayBarSegment(
+                    weekday: wd,
+                    activityID: aid,
+                    averageHours: avg,
+                    color: act.color(),
+                    stackOrder: stackOrder
+                ))
+                dayTotal += avg
+            }
+            maxStacked = max(maxStacked, dayTotal)
+        }
+
+        segments.sort {
+            if $0.weekday != $1.weekday { return $0.weekday < $1.weekday }
+            return $0.stackOrder < $1.stackOrder
+        }
+        weekdayBarSegments = segments
+        maxWeekdayBarHours = maxStacked
     }
 
     // MARK: - Streak Calculation
