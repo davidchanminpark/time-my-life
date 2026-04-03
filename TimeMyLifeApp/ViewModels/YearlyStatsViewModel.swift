@@ -56,6 +56,18 @@ class YearlyStatsViewModel {
     var maxWeekdayBarHours: Double = 0
     var isLoading = false
 
+    var weekdayBarYAxisTickHours: [Double] {
+        StatsChartYAxis.yTickHours(
+            maxHours: maxWeekdayBarHours,
+            period: .daily,
+            hasData: !weekdayBarSegments.isEmpty
+        )
+    }
+
+    var weekdayBarUseMinuteYAxis: Bool {
+        StatsChartYAxis.useMinuteLabels(maxHours: maxWeekdayBarHours, period: .daily)
+    }
+
     /// Populated from `DataService.yearsWithTrackingHistory()` (earliest tracking through current year).
     var availableYears: [Int] = []
 

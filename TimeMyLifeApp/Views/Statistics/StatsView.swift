@@ -177,9 +177,16 @@ struct StatsView: View {
             }
             .chartLegend(.hidden)
             .chartXAxis {
-                AxisMarks(values: .automatic) { _ in
-                    AxisGridLine()
-                    AxisValueLabel(format: axisFormat)
+                if isWeekly {
+                    AxisMarks(values: .stride(by: .weekOfYear, count: 2)) { _ in
+                        AxisGridLine()
+                        AxisValueLabel(format: axisFormat)
+                    }
+                } else {
+                    AxisMarks(values: .stride(by: .day, count: 2)) { _ in
+                        AxisGridLine()
+                        AxisValueLabel(format: axisFormat)
+                    }
                 }
             }
             .chartYAxis {
