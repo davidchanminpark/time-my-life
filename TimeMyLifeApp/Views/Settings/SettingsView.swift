@@ -185,8 +185,10 @@ struct SettingsView: View {
                                 toggleHour(hour)
                             } label: {
                                 Text(NotificationService.formatHour(hour))
-                                    .font(.system(.caption, design: .rounded, weight: .semibold))
-                                    .padding(.horizontal, 10)
+                                    .font(.system(.caption2, design: .rounded, weight: .semibold))
+                                    .lineLimit(1)
+                                    .fixedSize()
+                                    .padding(.horizontal, 8)
                                     .padding(.vertical, 8)
                                     .background(
                                         selected
