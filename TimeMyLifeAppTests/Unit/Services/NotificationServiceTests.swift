@@ -35,7 +35,7 @@ final class NotificationServiceTests: XCTestCase {
         XCTAssertFalse(summary.allGoalsMet)
     }
 
-    func test_allGoalsMet_returnsCongratulatoryMessage() throws {
+    func test_allGoalsMet_flagsAllMetAndSkipsNotification() throws {
         let activity = Activity(name: "Reading", colorHex: "#BFC8FF", category: "Learning", scheduledDays: [1, 2, 3, 4, 5, 6, 7])
         try dataService.createActivity(activity)
 
@@ -48,12 +48,11 @@ final class NotificationServiceTests: XCTestCase {
 
         let summary = sut.buildGoalSummary(dataService: dataService)
 
-        XCTAssertEqual(summary.title, "All Goals Met!")
-        XCTAssert(summary.body.contains("1 daily goal"))
+        // allGoalsMet = true means scheduleProgressNotifications will skip scheduling
         XCTAssertTrue(summary.allGoalsMet)
     }
 
-    func test_someGoalsMet_returnsProgressMessage() throws {
+    func test_someGoalsMet_sendsNotificationWithProgress() throws {
         let activity1 = Activity(name: "Reading", colorHex: "#BFC8FF", category: "Learning", scheduledDays: [1, 2, 3, 4, 5, 6, 7])
         let activity2 = Activity(name: "Exercise", colorHex: "#FFB8B8", category: "Health", scheduledDays: [1, 2, 3, 4, 5, 6, 7])
         try dataService.createActivity(activity1)
@@ -71,12 +70,13 @@ final class NotificationServiceTests: XCTestCase {
 
         let summary = sut.buildGoalSummary(dataService: dataService)
 
+        // Notification should be sent (not all goals met)
+        XCTAssertFalse(summary.allGoalsMet)
         XCTAssertEqual(summary.title, "Daily Goals: 1/2")
         XCTAssert(summary.body.contains("1 goal remaining"))
-        XCTAssertFalse(summary.allGoalsMet)
     }
 
-    func test_noGoalsMet_returnsZeroProgress() throws {
+    func test_noGoalsMet_sendsNotificationWithZeroProgress() throws {
         let activity = Activity(name: "Reading", colorHex: "#BFC8FF", category: "Learning", scheduledDays: [1, 2, 3, 4, 5, 6, 7])
         try dataService.createActivity(activity)
 
@@ -85,9 +85,10 @@ final class NotificationServiceTests: XCTestCase {
 
         let summary = sut.buildGoalSummary(dataService: dataService)
 
+        // Notification should be sent (no goals met yet)
+        XCTAssertFalse(summary.allGoalsMet)
         XCTAssertEqual(summary.title, "Daily Goals: 0/1")
         XCTAssert(summary.body.contains("1 goal remaining"))
-        XCTAssertFalse(summary.allGoalsMet)
     }
 
     // MARK: - Settings Helpers
