@@ -9,6 +9,7 @@ import WatchConnectivity
 
 struct SettingsView: View {
     let dataService: DataService
+    let notificationService: NotificationService
     let syncService: WatchConnectivitySyncService?
 
     // MARK: - Persisted preferences
@@ -19,6 +20,10 @@ struct SettingsView: View {
     @AppStorage("firstDayOfWeek") private var firstDayOfWeek: Int = 1
     /// Unix timestamp of last successful sync
     @AppStorage("lastSyncTimestamp") private var lastSyncTimestamp: Double = 0
+    /// Whether goal progress notifications are enabled
+    @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = false
+    /// Comma-separated hours for notification times (e.g., "12,18")
+    @AppStorage("notificationHours") private var notificationHours: String = "12,18"
 
     // MARK: - Transient state
 
@@ -32,8 +37,9 @@ struct SettingsView: View {
     @State private var showSeedSuccess = false
     #endif
 
-    init(dataService: DataService, syncService: WatchConnectivitySyncService? = nil) {
+    init(dataService: DataService, notificationService: NotificationService, syncService: WatchConnectivitySyncService? = nil) {
         self.dataService = dataService
+        self.notificationService = notificationService
         self.syncService = syncService
     }
 
@@ -43,6 +49,7 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 generalSection
+                notificationsSection
                 activitiesSection
                 dataSection
                 if syncService != nil { syncSection }
@@ -125,6 +132,109 @@ struct SettingsView: View {
                     Image(systemName: "calendar")
                         .foregroundStyle(Color.appAccent)
                 }
+            }
+        }
+    }
+
+    // MARK: - Notifications Section
+
+    private var notificationsSection: some View {
+        Section {
+            Toggle(isOn: $notificationsEnabled) {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Goal Reminders")
+                        Text("Get daily goal progress updates")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "bell.badge.fill")
+                        .foregroundStyle(.orange)
+                }
+            }
+            .onChange(of: notificationsEnabled) { _, enabled in
+                Task {
+                    if enabled {
+                        let granted = await notificationService.requestPermission()
+                        if !granted {
+                            notificationsEnabled = false
+                        } else {
+                            let hours = NotificationService.selectedHours(from: notificationHours)
+                            await notificationService.scheduleProgressNotifications(
+                                dataService: dataService,
+                                selectedHours: hours
+                            )
+                        }
+                    } else {
+                        notificationService.cancelProgressNotifications()
+                    }
+                }
+            }
+
+            if notificationsEnabled {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Reminder Times")
+                        .font(.system(.subheadline, design: .rounded, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 8) {
+                        ForEach(NotificationService.presetHours, id: \.self) { hour in
+                            let selected = selectedHoursSet.contains(hour)
+                            Button {
+                                toggleHour(hour)
+                            } label: {
+                                Text(NotificationService.formatHour(hour))
+                                    .font(.system(.caption2, design: .rounded, weight: .semibold))
+                                    .lineLimit(1)
+                                    .fixedSize()
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        selected
+                                            ? Color.appAccent.opacity(0.15)
+                                            : Color.secondary.opacity(0.08)
+                                    )
+                                    .foregroundStyle(selected ? Color.appAccent : .secondary)
+                                    .clipShape(Capsule())
+                                    .overlay(
+                                        Capsule()
+                                            .strokeBorder(
+                                                selected ? Color.appAccent : Color.clear,
+                                                lineWidth: 1.5
+                                            )
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        } header: {
+            Text("Notifications")
+        }
+    }
+
+    private var selectedHoursSet: Set<Int> {
+        NotificationService.selectedHours(from: notificationHours)
+    }
+
+    private func toggleHour(_ hour: Int) {
+        var hours = selectedHoursSet
+        if hours.contains(hour) {
+            hours.remove(hour)
+        } else {
+            hours.insert(hour)
+        }
+        notificationHours = NotificationService.storeHours(hours)
+
+        if notificationsEnabled {
+            Task {
+                await notificationService.scheduleProgressNotifications(
+                    dataService: dataService,
+                    selectedHours: hours
+                )
             }
         }
     }
@@ -351,12 +461,12 @@ struct SettingsView: View {
 
 #Preview("Settings") {
     let (container, dataService, _) = IOSViewPreviewSupport.dependencies()
-    SettingsView(dataService: dataService, syncService: nil)
+    SettingsView(dataService: dataService, notificationService: NotificationService(), syncService: nil)
         .modelContainer(container)
 }
 
 #Preview("Settings — empty store") {
     let (container, dataService, _) = IOSViewPreviewSupport.dependencies(seedSample: false)
-    SettingsView(dataService: dataService, syncService: nil)
+    SettingsView(dataService: dataService, notificationService: NotificationService(), syncService: nil)
         .modelContainer(container)
 }

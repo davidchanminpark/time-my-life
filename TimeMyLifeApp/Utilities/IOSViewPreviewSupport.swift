@@ -86,6 +86,7 @@ struct IOSPreviewFullAppShell: View {
         ContentView(
             dataService: DataService(modelContext: container.mainContext),
             timerService: TimerService(modelContext: container.mainContext),
+            notificationService: NotificationService(),
             syncService: nil
         )
         .modelContainer(container)

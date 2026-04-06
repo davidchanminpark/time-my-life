@@ -9,13 +9,15 @@ import SwiftData
 struct ContentView: View {
     let dataService: DataService
     let timerService: TimerService
+    let notificationService: NotificationService
     let syncService: WatchConnectivitySyncService?
 
     @State private var selectedTab = 0
 
-    init(dataService: DataService, timerService: TimerService, syncService: WatchConnectivitySyncService? = nil) {
+    init(dataService: DataService, timerService: TimerService, notificationService: NotificationService, syncService: WatchConnectivitySyncService? = nil) {
         self.dataService = dataService
         self.timerService = timerService
+        self.notificationService = notificationService
         self.syncService = syncService
         // Hide the system tab bar globally so our custom one takes over
         UITabBar.appearance().isHidden = true
@@ -33,7 +35,7 @@ struct ContentView: View {
                 StatsView(dataService: dataService)
                     .tag(2)
 
-                SettingsView(dataService: dataService, syncService: syncService)
+                SettingsView(dataService: dataService, notificationService: notificationService, syncService: syncService)
                     .tag(3)
             }
             // Reserve space at the bottom so list content scrolls above the floating bar

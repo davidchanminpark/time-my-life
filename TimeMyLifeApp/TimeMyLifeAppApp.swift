@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 @main
 struct TimeMyLifeAppApp: App {
@@ -26,6 +27,9 @@ struct TimeMyLifeAppApp: App {
 
     /// Sync service for iOS ↔ watchOS communication
     let syncService: WatchConnectivitySyncService
+
+    /// Notification service for goal progress reminders
+    let notificationService: NotificationService
 
     // MARK: - Scene Phase Tracking
 
@@ -58,6 +62,7 @@ struct TimeMyLifeAppApp: App {
                 syncService: sync
             )
             self.timerService = TimerService(modelContext: modelContainer.mainContext)
+            self.notificationService = NotificationService()
 
             // Activate sync service
             Task { @MainActor in
@@ -114,6 +119,7 @@ struct TimeMyLifeAppApp: App {
             ContentView(
                 dataService: dataService,
                 timerService: timerService,
+                notificationService: notificationService,
                 syncService: syncService
             )
         }
@@ -133,6 +139,7 @@ struct TimeMyLifeAppApp: App {
             print("📱 iOS App became active")
             #endif
             checkForRunningTimer()
+            rescheduleNotificationsIfEnabled()
 
         case .inactive:
             #if DEBUG
@@ -171,6 +178,21 @@ struct TimeMyLifeAppApp: App {
                 print("❌ Error checking timer state: \(error.localizedDescription)")
                 #endif
             }
+        }
+    }
+
+    /// Re-schedules goal progress notifications so content reflects the latest progress.
+    /// Only runs if the user has notifications enabled in Settings.
+    private func rescheduleNotificationsIfEnabled() {
+        let enabled = UserDefaults.standard.bool(forKey: "notificationsEnabled")
+        guard enabled else { return }
+        let hoursString = UserDefaults.standard.string(forKey: "notificationHours")
+        let hours = NotificationService.selectedHours(from: hoursString)
+        Task { @MainActor in
+            await notificationService.scheduleProgressNotifications(
+                dataService: dataService,
+                selectedHours: hours
+            )
         }
     }
 
