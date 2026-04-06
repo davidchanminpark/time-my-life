@@ -57,8 +57,15 @@ class NotificationService {
 
         guard !selectedHours.isEmpty else { return }
 
+        // Skip notifications entirely if all goals are already met
+        let summary = buildGoalSummary(dataService: dataService)
+        guard !summary.allGoalsMet else { return }
+
         // Build notification content from current goal progress
-        let content = await buildNotificationContent(dataService: dataService)
+        let content = UNMutableNotificationContent()
+        content.sound = .default
+        content.title = summary.title
+        content.body = summary.body
 
         for hour in selectedHours.sorted() {
             let identifier = "\(Self.notificationIdentifierPrefix)\(hour)"
@@ -90,20 +97,10 @@ class NotificationService {
 
     // MARK: - Content Generation
 
-    func buildNotificationContent(dataService: DataService) async -> UNMutableNotificationContent {
-        let content = UNMutableNotificationContent()
-        content.sound = .default
-
-        let summary = buildGoalSummary(dataService: dataService)
-        content.title = summary.title
-        content.body = summary.body
-
-        return content
-    }
-
     struct GoalSummary {
         let title: String
         let body: String
+        let allGoalsMet: Bool
     }
 
     func buildGoalSummary(dataService: DataService) -> GoalSummary {
@@ -112,7 +109,8 @@ class NotificationService {
             guard !goals.isEmpty else {
                 return GoalSummary(
                     title: "Time My Life",
-                    body: "Set up daily goals to track your progress!"
+                    body: "Set up daily goals to track your progress!",
+                    allGoalsMet: false
                 )
             }
 
@@ -131,18 +129,21 @@ class NotificationService {
             if completed == total {
                 return GoalSummary(
                     title: "All Goals Met!",
-                    body: "You've completed all \(total) daily goal\(total == 1 ? "" : "s") today. Great work!"
+                    body: "You've completed all \(total) daily goal\(total == 1 ? "" : "s") today. Great work!",
+                    allGoalsMet: true
                 )
             } else {
                 return GoalSummary(
                     title: "Daily Goals: \(completed)/\(total)",
-                    body: "\(total - completed) goal\(total - completed == 1 ? "" : "s") remaining — keep going!"
+                    body: "\(total - completed) goal\(total - completed == 1 ? "" : "s") remaining — keep going!",
+                    allGoalsMet: false
                 )
             }
         } catch {
             return GoalSummary(
                 title: "Time My Life",
-                body: "Check your daily goals progress!"
+                body: "Check your daily goals progress!",
+                allGoalsMet: false
             )
         }
     }

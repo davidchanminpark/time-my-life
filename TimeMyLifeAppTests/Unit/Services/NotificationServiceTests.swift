@@ -32,6 +32,7 @@ final class NotificationServiceTests: XCTestCase {
 
         XCTAssertEqual(summary.title, "Time My Life")
         XCTAssertEqual(summary.body, "Set up daily goals to track your progress!")
+        XCTAssertFalse(summary.allGoalsMet)
     }
 
     func test_allGoalsMet_returnsCongratulatoryMessage() throws {
@@ -49,6 +50,7 @@ final class NotificationServiceTests: XCTestCase {
 
         XCTAssertEqual(summary.title, "All Goals Met!")
         XCTAssert(summary.body.contains("1 daily goal"))
+        XCTAssertTrue(summary.allGoalsMet)
     }
 
     func test_someGoalsMet_returnsProgressMessage() throws {
@@ -71,6 +73,7 @@ final class NotificationServiceTests: XCTestCase {
 
         XCTAssertEqual(summary.title, "Daily Goals: 1/2")
         XCTAssert(summary.body.contains("1 goal remaining"))
+        XCTAssertFalse(summary.allGoalsMet)
     }
 
     func test_noGoalsMet_returnsZeroProgress() throws {
@@ -84,6 +87,7 @@ final class NotificationServiceTests: XCTestCase {
 
         XCTAssertEqual(summary.title, "Daily Goals: 0/1")
         XCTAssert(summary.body.contains("1 goal remaining"))
+        XCTAssertFalse(summary.allGoalsMet)
     }
 
     // MARK: - Settings Helpers
