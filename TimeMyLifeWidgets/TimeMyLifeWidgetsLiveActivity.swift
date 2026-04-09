@@ -21,6 +21,10 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
                 DynamicIslandExpandedRegion(.leading) {
                     activityIcon(context: context, size: 36)
                 }
+                DynamicIslandExpandedRegion(.center) {
+                    Text(context.attributes.activityName)
+                        .font(.system(.body, design: .rounded, weight: .medium))
+                }
                 DynamicIslandExpandedRegion(.trailing) {
                     Text(
                         timerInterval: context.state.timerStartDate...Date.distantFuture,
@@ -28,12 +32,8 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
                     )
                     .font(.system(.title2, design: .rounded, weight: .bold))
                     .monospacedDigit()
+                    .multilineTextAlignment(.trailing)
                     .frame(maxWidth: .infinity, alignment: .trailing)
-                }
-                DynamicIslandExpandedRegion(.bottom) {
-                    Text(context.attributes.activityName)
-                        .font(.system(.body, design: .rounded, weight: .medium))
-                        .foregroundStyle(.secondary)
                 }
             } compactLeading: {
                 // MARK: - Compact Leading
@@ -46,11 +46,12 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
                 )
                 .font(.system(.caption, design: .rounded, weight: .semibold))
                 .monospacedDigit()
-                .frame(width: 52)
+                .multilineTextAlignment(.trailing)
             } minimal: {
                 // MARK: - Minimal
                 activityIcon(context: context, size: 22)
             }
+            .keylineTint(activityColor(hex: context.attributes.activityColorHex))
         }
     }
 
@@ -147,7 +148,25 @@ extension TimerActivityAttributes.ContentState {
     }
 }
 
-#Preview("Notification", as: .content, using: TimerActivityAttributes.preview) {
+#Preview("Lock Screen", as: .content, using: TimerActivityAttributes.preview) {
+    TimeMyLifeWidgetsLiveActivity()
+} contentStates: {
+    TimerActivityAttributes.ContentState.running
+}
+
+#Preview("Dynamic Island Compact", as: .dynamicIsland(.compact), using: TimerActivityAttributes.preview) {
+    TimeMyLifeWidgetsLiveActivity()
+} contentStates: {
+    TimerActivityAttributes.ContentState.running
+}
+
+#Preview("Dynamic Island Expanded", as: .dynamicIsland(.expanded), using: TimerActivityAttributes.preview) {
+    TimeMyLifeWidgetsLiveActivity()
+} contentStates: {
+    TimerActivityAttributes.ContentState.running
+}
+
+#Preview("Dynamic Island Minimal", as: .dynamicIsland(.minimal), using: TimerActivityAttributes.preview) {
     TimeMyLifeWidgetsLiveActivity()
 } contentStates: {
     TimerActivityAttributes.ContentState.running
