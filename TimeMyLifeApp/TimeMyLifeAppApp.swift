@@ -172,15 +172,15 @@ struct TimeMyLifeAppApp: App {
     private func checkForRunningTimer() {
         Task { @MainActor in
             do {
-                // End any Live Activities left over from a killed session.
-                timerService.endAllLiveActivities()
-
                 let context = modelContainer.mainContext
                 let activeTimer = try ActiveTimer.shared(in: context)
 
                 // If the timer is running in-memory, this is a normal foreground return — do nothing.
                 // If it's only running in SwiftData, the app was killed and we need to clean up.
                 if activeTimer.isRunning, !timerService.isRunning {
+                    // End Live Activities left over from the killed session.
+                    timerService.endAllLiveActivities()
+
                     activeTimer.activityID = nil
                     activeTimer.startTime = nil
                     activeTimer.startDate = nil
