@@ -74,7 +74,8 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
 
             Text(context.attributes.activityName)
                 .font(.system(size: 20, weight: .semibold, design: .rounded))
-                .lineLimit(1)
+                .lineLimit(2)
+                
 
             Spacer(minLength: 8)
 
@@ -89,7 +90,7 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
             .frame(minWidth: 90, alignment: .trailing)
             
         }
-        .padding(20)
+        .padding(25)
         .activityBackgroundTint(Color(.systemBackground))
         .activitySystemActionForegroundColor(activityColor(hex: context.attributes.activityColorHex))
     }
@@ -146,7 +147,7 @@ private extension Color {
 extension TimerActivityAttributes {
     fileprivate static var preview: TimerActivityAttributes {
         TimerActivityAttributes(
-            activityName: "Language Study ",
+            activityName: "Meditation Exercise ",
             activityEmoji: "📚",
             activityColorHex: "#FFB3BA"
         )
