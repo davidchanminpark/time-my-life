@@ -6,6 +6,35 @@
 import SwiftUI
 import UIKit
 
+// MARK: - Appearance Preference
+
+/// User-selectable appearance override. `.system` defers to iOS settings;
+/// `.light` / `.dark` force the app into that mode regardless of system.
+enum AppearancePreference: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .system: return "System"
+        case .light:  return "Light"
+        case .dark:   return "Dark"
+        }
+    }
+
+    /// Maps to SwiftUI's `preferredColorScheme`. `nil` means follow system.
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light:  return .light
+        case .dark:   return .dark
+        }
+    }
+}
+
 // MARK: - Theme Colors
 
 extension Color {

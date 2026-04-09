@@ -35,6 +35,9 @@ struct TimeMyLifeAppApp: App {
 
     @Environment(\.scenePhase) private var scenePhase
 
+    /// User-selected appearance override (system/light/dark). Controlled in Settings.
+    @AppStorage("appearancePreference") private var appearancePreferenceRaw: String = AppearancePreference.system.rawValue
+
     // MARK: - Initialization
 
     init() {
@@ -121,6 +124,9 @@ struct TimeMyLifeAppApp: App {
                 timerService: timerService,
                 notificationService: notificationService,
                 syncService: syncService
+            )
+            .preferredColorScheme(
+                AppearancePreference(rawValue: appearancePreferenceRaw)?.colorScheme
             )
         }
         .modelContainer(modelContainer)
