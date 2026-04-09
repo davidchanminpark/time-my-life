@@ -73,6 +73,8 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
             )
             .font(.system(.title, design: .rounded, weight: .bold))
             .monospacedDigit()
+            .multilineTextAlignment(.trailing)
+            .frame(alignment: .trailing)
             .foregroundStyle(activityColor(hex: context.attributes.activityColorHex))
         }
         .padding(16)
