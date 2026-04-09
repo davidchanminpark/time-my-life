@@ -46,7 +46,7 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
                 // MARK: - Compact Leading
                 Text(context.attributes.activityEmoji.isEmpty ? "⏱" : context.attributes.activityEmoji)
                     .font(.system(size: 14))
-                    .padding(.leading, 4)
+                    .padding(.leading, 6)
             } compactTrailing: {
                 // MARK: - Compact Trailing
                 Text(
@@ -55,8 +55,8 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
                 )
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .monospacedDigit()
-                .frame(width: 42)
-                .padding(.trailing, 4)
+                .frame(width: 30)
+                .padding(.trailing, 0)
             } minimal: {
                 // MARK: - Minimal
                 activityIcon(context: context, size: 22)
@@ -70,11 +70,12 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
     @ViewBuilder
     private func lockScreenView(context: ActivityViewContext<TimerActivityAttributes>) -> some View {
         HStack(spacing: 14) {
-            activityIcon(context: context, size: 44)
+            activityIcon(context: context, size: 50)
 
             Text(context.attributes.activityName)
-                .font(.system(.headline, design: .rounded, weight: .semibold))
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .lineLimit(1)
+                .layoutPriority(1)
 
             Spacer()
 
@@ -85,11 +86,9 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
             .font(.system(.title, design: .rounded, weight: .bold))
             .monospacedDigit()
             .multilineTextAlignment(.trailing)
-            .frame(alignment: .trailing)
             .foregroundStyle(activityColor(hex: context.attributes.activityColorHex))
-            .fixedSize()
         }
-        .padding(16)
+        .padding(20)
         .activityBackgroundTint(Color(.systemBackground))
         .activitySystemActionForegroundColor(activityColor(hex: context.attributes.activityColorHex))
     }
@@ -146,7 +145,7 @@ private extension Color {
 extension TimerActivityAttributes {
     fileprivate static var preview: TimerActivityAttributes {
         TimerActivityAttributes(
-            activityName: "Reading",
+            activityName: "Language Study",
             activityEmoji: "📚",
             activityColorHex: "#FFB3BA"
         )
