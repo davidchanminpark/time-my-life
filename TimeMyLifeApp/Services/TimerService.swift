@@ -342,6 +342,9 @@ public class TimerService {
     // MARK: - Private Methods
 
     /// Fetches the accumulated duration already logged for an activity on a given date.
+    /// The Live Activity widget runs in a separate process and can't observe the app's
+    /// in-memory timer state. We offset its start date by the accumulated time so the
+    /// widget's `Text(.timerInterval:)` produces the same total as the in-app display.
     private func fetchAccumulatedTime(activityID: UUID, date: Date) -> TimeInterval {
         let normalizedDate = Calendar.current.startOfDay(for: date)
         let predicate = #Predicate<TimeEntry> { entry in
