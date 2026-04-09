@@ -164,19 +164,28 @@ struct TimeMyLifeAppApp: App {
         }
     }
 
-    /// Checks if a timer is running when app becomes active
+    /// Checks if a timer is running when app becomes active.
+    /// Ends any stale Live Activities and starts a fresh one if a timer is still running.
     private func checkForRunningTimer() {
         Task { @MainActor in
             do {
                 let context = modelContainer.mainContext
-                let timer = try ActiveTimer.shared(in: context)
+                let activeTimer = try ActiveTimer.shared(in: context)
 
-                if timer.isRunning {
+                // Clean up any Live Activities left over from a previous app session
+                // (e.g. after a force-kill where we had no chance to end them).
+                timerService.endAllLiveActivities()
+
+                if activeTimer.isRunning,
+                   let activityID = activeTimer.activityID,
+                   let startTime = activeTimer.startTime,
+                   let activity = try dataService.fetchActivity(id: activityID) {
+                    // Restore the timer and start a fresh Live Activity
+                    try timerService.restoreTimerState(from: activeTimer, activity: activity)
+
                     #if DEBUG
-                    if let startTime = timer.startTime {
-                        let elapsed = Date().timeIntervalSince(startTime)
-                        print("✅ Timer is running - elapsed: \(formatElapsed(elapsed))")
-                    }
+                    let elapsed = Date().timeIntervalSince(startTime)
+                    print("✅ Timer restored - elapsed: \(formatElapsed(elapsed))")
                     #endif
                 }
             } catch {

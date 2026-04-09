@@ -276,6 +276,13 @@ public class TimerService {
         return try ActiveTimer.shared(in: modelContext)
     }
 
+    /// Ends all Live Activities (cleanup after force-kill or stale state).
+    public func endAllLiveActivities() {
+        #if os(iOS)
+        liveActivityService.endAll()
+        #endif
+    }
+
     /// Resets the timer state (for testing/clearing data)
     /// - Throws: Error if save fails
     public func reset() throws {
