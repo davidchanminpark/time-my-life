@@ -19,12 +19,14 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
             DynamicIsland {
                 // MARK: - Expanded Dynamic Island
                 DynamicIslandExpandedRegion(.bottom) {
-                    HStack(alignment: .center, spacing: 10) {
-                        activityIcon(context: context, size: 32)
+                    HStack(alignment: .center, spacing: 12) {
+                        Text(context.attributes.activityEmoji.isEmpty ? "⏱" : context.attributes.activityEmoji)
+                            .font(.system(size: 36))
 
                         Text(context.attributes.activityName)
-                            .font(.system(.body, design: .rounded, weight: .medium))
+                            .font(.system(.title2, design: .rounded, weight: .semibold))
                             .lineLimit(1)
+                            .foregroundStyle(.white)
 
                         Spacer()
 
@@ -32,10 +34,13 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
                             timerInterval: context.state.timerStartDate...Date.distantFuture,
                             countsDown: false
                         )
-                        .font(.system(.title3, design: .rounded, weight: .bold))
+                        .font(.system(.title, design: .rounded, weight: .bold))
                         .monospacedDigit()
                         .multilineTextAlignment(.trailing)
+                        .foregroundStyle(activityColor(hex: context.attributes.activityColorHex))
                     }
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
                 }
             } compactLeading: {
                 // MARK: - Compact Leading
