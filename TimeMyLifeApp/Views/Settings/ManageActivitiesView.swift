@@ -42,6 +42,10 @@ struct ManageActivitiesView: View {
                     Text("\(viewModel.activities.count) / 30 activities")
                 }
             }
+
+            Section {} footer: {
+                Color.clear.frame(height: 90)
+            }
         }
         .navigationTitle("Manage Activities")
         .navigationBarTitleDisplayMode(.inline)
