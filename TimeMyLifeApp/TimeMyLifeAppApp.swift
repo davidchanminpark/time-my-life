@@ -156,39 +156,31 @@ struct TimeMyLifeAppApp: App {
             #if DEBUG
             print("📱 iOS App went to background")
             #endif
-            // Timer state is automatically persisted by SwiftData
-            // CloudKit sync happens automatically in the background
+            // Checkpoint the running timer's elapsed time so it's saved
+            // even if the user force-kills the app from the app switcher.
+            // The timer and Live Activity keep running in the background.
+            checkpointRunningTimer()
 
         @unknown default:
             break
         }
     }
 
-    /// Checks if a timer was left running from a previous session (e.g. force-kill).
-    /// Saves the elapsed time, stops the timer, and cleans up stale Live Activities.
+    /// Cleans up orphaned timers from a previous session (e.g. after a force-kill).
+    /// The elapsed time was already checkpointed when the app last went to background,
+    /// so we just need to clear the ActiveTimer state and end stale Live Activities.
     private func checkForRunningTimer() {
         Task { @MainActor in
             do {
                 let context = modelContainer.mainContext
                 let activeTimer = try ActiveTimer.shared(in: context)
 
-                // Clean up any Live Activities left over from a previous app session
-                // (e.g. after a force-kill where we had no chance to end them).
-                timerService.endAllLiveActivities()
+                // If the timer is running in-memory, this is a normal foreground return — do nothing.
+                // If it's only running in SwiftData, the app was killed and we need to clean up.
+                if activeTimer.isRunning, !timerService.isRunning {
+                    // End Live Activities left over from the killed session.
+                    timerService.endAllLiveActivities()
 
-                if activeTimer.isRunning,
-                   let activityID = activeTimer.activityID,
-                   let startTime = activeTimer.startTime,
-                   let startDate = activeTimer.startDate {
-                    // Save the elapsed time from the orphaned timer session
-                    let elapsed = Date().timeIntervalSince(startTime)
-                    try dataService.createOrUpdateTimeEntry(
-                        activityID: activityID,
-                        date: startDate,
-                        duration: elapsed
-                    )
-
-                    // Clear the active timer state
                     activeTimer.activityID = nil
                     activeTimer.startTime = nil
                     activeTimer.startDate = nil
@@ -196,7 +188,7 @@ struct TimeMyLifeAppApp: App {
                     try context.save()
 
                     #if DEBUG
-                    print("✅ Orphaned timer saved and stopped - elapsed: \(formatElapsed(elapsed))")
+                    print("✅ Cleaned up orphaned ActiveTimer (time was saved on background)")
                     #endif
                 }
             } catch {
@@ -204,6 +196,32 @@ struct TimeMyLifeAppApp: App {
                 print("❌ Error checking timer state: \(error.localizedDescription)")
                 #endif
             }
+        }
+    }
+
+    /// Saves the running timer's elapsed time to the TimeEntry as a checkpoint.
+    /// Called when the app goes to background so the duration is preserved
+    /// even if the user force-kills the app from the app switcher.
+    /// TODO: Replace with server-side APNs save once Apple Developer Program is available.
+    private func checkpointRunningTimer() {
+        guard timerService.isRunning,
+              let activity = timerService.currentActivity,
+              let date = timerService.currentDate else { return }
+
+        let elapsed = timerService.getCurrentElapsedTime()
+        do {
+            try dataService.createOrUpdateTimeEntry(
+                activityID: activity.id,
+                date: date,
+                duration: elapsed
+            )
+            #if DEBUG
+            print("✅ Checkpointed timer: \(formatElapsed(elapsed))")
+            #endif
+        } catch {
+            #if DEBUG
+            print("❌ Failed to checkpoint timer: \(error.localizedDescription)")
+            #endif
         }
     }
 
