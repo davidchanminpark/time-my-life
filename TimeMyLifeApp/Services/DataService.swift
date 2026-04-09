@@ -252,6 +252,53 @@ public class DataService {
         }
     }
 
+    /// Overwrites the duration of an existing time entry, or creates one if none exists.
+    /// Unlike `createOrUpdateTimeEntry`, this *replaces* the duration rather than accumulating.
+    /// Used by the Edit Time Entry flow when the user manually corrects a value.
+    /// - Parameters:
+    ///   - activityID: UUID of the activity
+    ///   - date: Date for the entry (will be normalized to start of day)
+    ///   - duration: New total duration in seconds (negative values clamped to 0)
+    /// - Throws: Error if fetch or save fails
+    public func setTimeEntryDuration(
+        activityID: UUID,
+        date: Date,
+        duration: TimeInterval
+    ) throws {
+        let normalizedDate = Calendar.current.startOfDay(for: date)
+        let validDuration = max(0, duration)
+
+        let predicate = #Predicate<TimeEntry> { entry in
+            entry.activityID == activityID && entry.date == normalizedDate
+        }
+        let descriptor = FetchDescriptor<TimeEntry>(predicate: predicate)
+        let results = try modelContext.fetch(descriptor)
+
+        let timeEntry: TimeEntry
+        let action: SyncAction
+
+        if let existing = results.first {
+            existing.totalDuration = validDuration
+            timeEntry = existing
+            action = .update
+        } else {
+            let newEntry = TimeEntry(
+                activityID: activityID,
+                date: normalizedDate,
+                totalDuration: validDuration
+            )
+            modelContext.insert(newEntry)
+            timeEntry = newEntry
+            action = .create
+        }
+
+        try modelContext.save()
+
+        Task {
+            try? await syncService?.syncModel(timeEntry, type: .timeEntry, action: action)
+        }
+    }
+
     /// Deletes a time entry
     /// - Parameter entry: TimeEntry to delete
     /// - Throws: Error if save fails

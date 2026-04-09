@@ -18,6 +18,7 @@ struct ActivityFormView: View {
     @State private var viewModel: ActivityFormViewModel
     @State private var showEmojiPicker = false
     @State private var showAddTimeEntry = false
+    @State private var showEditTimeEntry = false
     @Environment(\.dismiss) private var dismiss
 
     init(mode: Mode, dataService: DataService) {
@@ -52,6 +53,7 @@ struct ActivityFormView: View {
 
                     if case .edit = mode {
                         addTimeEntrySection
+                        editTimeEntrySection
                         deleteSection
                     }
 
@@ -99,6 +101,11 @@ struct ActivityFormView: View {
                 AddTimeEntrySheet(activity: activity, dataService: dataService)
             }
         }
+        .sheet(isPresented: $showEditTimeEntry) {
+            if case .edit(let activity) = mode {
+                EditTimeEntrySheet(activity: activity, dataService: dataService)
+            }
+        }
         .sheet(isPresented: $showEmojiPicker) {
             EmojiPickerSheet(selectedEmoji: Binding(
                 get: { viewModel.emoji },
@@ -128,6 +135,20 @@ struct ActivityFormView: View {
             showAddTimeEntry = true
         } label: {
             Label("Add Time Entry", systemImage: "plus.circle")
+                .font(.system(.body, design: .rounded, weight: .semibold))
+                .foregroundStyle(Color.appAccent)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
+        .appCard()
+    }
+
+    private var editTimeEntrySection: some View {
+        Button {
+            showEditTimeEntry = true
+        } label: {
+            Label("Edit Time Entry", systemImage: "pencil.circle")
                 .font(.system(.body, design: .rounded, weight: .semibold))
                 .foregroundStyle(Color.appAccent)
                 .frame(maxWidth: .infinity)
@@ -459,6 +480,202 @@ private struct AddTimeEntrySheet: View {
         } catch {
             errorMessage = "Failed to save: \(error.localizedDescription)"
         }
+    }
+}
+
+// MARK: - Edit Time Entry Sheet
+
+private struct EditTimeEntrySheet: View {
+    let activity: Activity
+    let dataService: DataService
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var viewModel: EditTimeEntryViewModel
+    @State private var showSaveConfirmation = false
+
+    init(activity: Activity, dataService: DataService) {
+        self.activity = activity
+        self.dataService = dataService
+        _viewModel = State(wrappedValue: EditTimeEntryViewModel(
+            activity: activity,
+            dataService: dataService
+        ))
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.appBackground.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 14) {
+                        recentEntriesCard
+                        if viewModel.selectedEntry != nil {
+                            durationCard
+                        }
+                        if let error = viewModel.errorMessage {
+                            Text(error)
+                                .font(.system(.caption, design: .rounded))
+                                .foregroundStyle(.red)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 4)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 32)
+                }
+            }
+            .navigationTitle("Edit Time Entry")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(.secondary)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    if viewModel.isSaving {
+                        ProgressView().scaleEffect(0.8)
+                    } else {
+                        Button {
+                            showSaveConfirmation = true
+                        } label: {
+                            Text("Save")
+                                .font(.system(.body, design: .rounded, weight: .semibold))
+                                .foregroundStyle(viewModel.canSave ? Color.appAccent : Color.secondary)
+                        }
+                        .disabled(!viewModel.canSave)
+                    }
+                }
+            }
+            .alert("Update Time Entry?", isPresented: $showSaveConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Update") {
+                    Task {
+                        if await viewModel.save() { dismiss() }
+                    }
+                }
+            } message: {
+                Text("This will overwrite the duration for the selected entry.")
+            }
+            .onAppear { viewModel.loadRecentEntries() }
+        }
+    }
+
+    // MARK: - Recent Entries Card
+
+    private var recentEntriesCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("RECENT ENTRIES")
+                .font(.system(.caption, design: .rounded, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .tracking(0.5)
+                .padding(.horizontal, 18)
+                .padding(.top, 16)
+                .padding(.bottom, 10)
+
+            if viewModel.recentEntries.isEmpty {
+                Text("No entries in the last 7 days")
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 18)
+                    .padding(.bottom, 18)
+            } else {
+                ForEach(Array(viewModel.recentEntries.enumerated()), id: \.element.id) { index, entry in
+                    entryRow(entry: entry)
+                    if index < viewModel.recentEntries.count - 1 {
+                        Divider().padding(.leading, 18)
+                    }
+                }
+                .padding(.bottom, 6)
+            }
+        }
+        .appCard()
+    }
+
+    private func entryRow(entry: TimeEntry) -> some View {
+        let isSelected = viewModel.selectedEntry?.id == entry.id
+        return Button {
+            viewModel.selectedEntry = entry
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 20))
+                    .foregroundStyle(isSelected ? Color.appAccent : Color.secondary.opacity(0.5))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(formatDate(entry.date))
+                        .font(.system(.subheadline, design: .rounded, weight: .medium))
+                        .foregroundStyle(.primary)
+                    Text(formatDuration(entry.totalDuration))
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Duration Card
+
+    private var durationCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("DURATION")
+                .font(.system(.caption, design: .rounded, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .tracking(0.5)
+
+            HStack(spacing: 0) {
+                Picker("Hours", selection: Binding(
+                    get: { viewModel.selectedHour },
+                    set: { viewModel.selectedHour = $0 }
+                )) {
+                    ForEach(0...23, id: \.self) { h in
+                        Text(h == 1 ? "1 hr" : "\(h) hrs").tag(h)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
+
+                Picker("Minutes", selection: Binding(
+                    get: { viewModel.selectedMinute },
+                    set: { viewModel.selectedMinute = $0 }
+                )) {
+                    ForEach(0...59, id: \.self) { m in
+                        Text(m == 1 ? "1 min" : "\(m) min").tag(m)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
+            }
+            .frame(height: 150)
+        }
+        .padding(18)
+        .appCard()
+    }
+
+    // MARK: - Helpers
+
+    private func formatDate(_ date: Date) -> String {
+        let cal = Calendar.current
+        if cal.isDateInToday(date) { return "Today" }
+        if cal.isDateInYesterday(date) { return "Yesterday" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM d, yyyy"
+        return formatter.string(from: date)
+    }
+
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let h = Int(seconds) / 3600
+        let m = (Int(seconds) % 3600) / 60
+        if h > 0 && m > 0 { return "\(h) hours \(m) minutes" }
+        if h > 0 { return h == 1 ? "1 hour" : "\(h) hours" }
+        return m == 1 ? "1 minute" : "\(m) minutes"
     }
 }
 
