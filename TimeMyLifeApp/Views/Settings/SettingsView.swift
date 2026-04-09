@@ -17,6 +17,8 @@ struct SettingsView: View {
     @AppStorage("midnightModePreference") private var midnightMode: String = "unset"
     /// 1 = Sunday, 2 = Monday
     @AppStorage("firstDayOfWeek") private var firstDayOfWeek: Int = 1
+    /// Appearance override: "system" | "light" | "dark"
+    @AppStorage("appearancePreference") private var appearancePreferenceRaw: String = AppearancePreference.system.rawValue
     /// Unix timestamp of last successful sync
     @AppStorage("lastSyncTimestamp") private var lastSyncTimestamp: Double = 0
 
@@ -124,6 +126,19 @@ struct SettingsView: View {
                 } icon: {
                     Image(systemName: "calendar")
                         .foregroundStyle(Color.appAccent)
+                }
+            }
+
+            Picker(selection: $appearancePreferenceRaw) {
+                ForEach(AppearancePreference.allCases) { pref in
+                    Text(pref.label).tag(pref.rawValue)
+                }
+            } label: {
+                Label {
+                    Text("Appearance")
+                } icon: {
+                    Image(systemName: "circle.lefthalf.filled")
+                        .foregroundStyle(.purple)
                 }
             }
         }
