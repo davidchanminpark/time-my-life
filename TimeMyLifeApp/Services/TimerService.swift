@@ -65,10 +65,15 @@ public class TimerService {
     private var timer: Timer?
     private var startTime: Date?
     private let modelContext: ModelContext
-    
+
     // Combine subjects for publishing changes
     private let elapsedTimeSubject = CurrentValueSubject<TimeInterval, Never>(0)
     private let isRunningSubject = CurrentValueSubject<Bool, Never>(false)
+
+    #if os(iOS)
+    /// Service for managing the Live Activity (Lock Screen / Dynamic Island)
+    private let liveActivityService = LiveActivityService()
+    #endif
 
     // MARK: - Initialization
 
@@ -109,6 +114,16 @@ public class TimerService {
         // Start UI updates
         startTimerUpdates()
 
+        // Start Live Activity (iOS only)
+        #if os(iOS)
+        liveActivityService.start(
+            activityName: activity.name,
+            activityEmoji: activity.emoji,
+            activityColorHex: activity.colorHex,
+            startDate: startTime!
+        )
+        #endif
+
         #if DEBUG
         print("✅ TimerService: Started timer for '\(activity.name)'")
         #endif
@@ -138,6 +153,11 @@ public class TimerService {
 
         // Stop UI updates
         stopTimerUpdates()
+
+        // End Live Activity (iOS only)
+        #if os(iOS)
+        liveActivityService.stop()
+        #endif
 
         // Reset local state
         self.isRunning = false
@@ -171,6 +191,16 @@ public class TimerService {
 
         // Start UI updates
         startTimerUpdates()
+
+        // Start Live Activity on resume (iOS only)
+        #if os(iOS)
+        liveActivityService.start(
+            activityName: activity.name,
+            activityEmoji: activity.emoji,
+            activityColorHex: activity.colorHex,
+            startDate: startTime
+        )
+        #endif
 
         #if DEBUG
         print("✅ TimerService: Resumed timer for '\(activity.name)', elapsed: \(formatDuration(elapsedTime))")
@@ -257,6 +287,11 @@ public class TimerService {
         activeTimer.startDate = nil
         activeTimer.isRunning = false
         try modelContext.save()
+
+        // End all Live Activities (iOS only)
+        #if os(iOS)
+        liveActivityService.endAll()
+        #endif
 
         #if DEBUG
         print("✅ TimerService: Reset timer state")
