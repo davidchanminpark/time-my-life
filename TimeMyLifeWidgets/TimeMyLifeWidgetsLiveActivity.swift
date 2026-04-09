@@ -18,35 +18,36 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 // MARK: - Expanded Dynamic Island
-                DynamicIslandExpandedRegion(.leading) {
-                    activityIcon(context: context, size: 36)
-                }
-                DynamicIslandExpandedRegion(.center) {
-                    Text(context.attributes.activityName)
-                        .font(.system(.body, design: .rounded, weight: .medium))
-                }
-                DynamicIslandExpandedRegion(.trailing) {
-                    Text(
-                        timerInterval: context.state.timerStartDate...Date.distantFuture,
-                        countsDown: false
-                    )
-                    .font(.system(.title2, design: .rounded, weight: .bold))
-                    .monospacedDigit()
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                DynamicIslandExpandedRegion(.bottom) {
+                    HStack(alignment: .center, spacing: 10) {
+                        activityIcon(context: context, size: 32)
+
+                        Text(context.attributes.activityName)
+                            .font(.system(.body, design: .rounded, weight: .medium))
+                            .lineLimit(1)
+
+                        Spacer()
+
+                        Text(
+                            timerInterval: context.state.timerStartDate...Date.distantFuture,
+                            countsDown: false
+                        )
+                        .font(.system(.title3, design: .rounded, weight: .bold))
+                        .monospacedDigit()
+                        .multilineTextAlignment(.trailing)
+                    }
                 }
             } compactLeading: {
                 // MARK: - Compact Leading
-                activityIcon(context: context, size: 24)
+                activityIcon(context: context, size: 18)
             } compactTrailing: {
                 // MARK: - Compact Trailing
                 Text(
                     timerInterval: context.state.timerStartDate...Date.distantFuture,
                     countsDown: false
                 )
-                .font(.system(.caption, design: .rounded, weight: .semibold))
+                .font(.system(.caption2, design: .rounded, weight: .semibold))
                 .monospacedDigit()
-                .multilineTextAlignment(.trailing)
             } minimal: {
                 // MARK: - Minimal
                 activityIcon(context: context, size: 22)
