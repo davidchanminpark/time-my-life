@@ -61,15 +61,9 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
         HStack(spacing: 14) {
             activityIcon(context: context, size: 44)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(context.attributes.activityName)
-                    .font(.system(.headline, design: .rounded, weight: .semibold))
-                    .lineLimit(1)
-
-                Text("Timer running")
-                    .font(.system(.caption, design: .rounded))
-                    .foregroundStyle(.secondary)
-            }
+            Text(context.attributes.activityName)
+                .font(.system(.headline, design: .rounded, weight: .semibold))
+                .lineLimit(1)
 
             Spacer()
 
