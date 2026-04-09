@@ -56,6 +56,7 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .frame(width: 42)
+                .padding(.trailing, 4)
             } minimal: {
                 // MARK: - Minimal
                 activityIcon(context: context, size: 22)
@@ -68,22 +69,20 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
 
     @ViewBuilder
     private func lockScreenView(context: ActivityViewContext<TimerActivityAttributes>) -> some View {
-        HStack(spacing: 10) {
-            activityIcon(context: context, size: 38)
+        HStack(spacing: 14) {
+            activityIcon(context: context, size: 44)
 
             Text(context.attributes.activityName)
                 .font(.system(.headline, design: .rounded, weight: .semibold))
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
-                .layoutPriority(1)
 
-            Spacer(minLength: 8)
+            Spacer()
 
             Text(
                 timerInterval: context.state.timerStartDate...Date.distantFuture,
                 countsDown: false
             )
-            .font(.system(.title3, design: .rounded, weight: .bold))
+            .font(.system(.title, design: .rounded, weight: .bold))
             .monospacedDigit()
             .multilineTextAlignment(.trailing)
             .frame(alignment: .trailing)
