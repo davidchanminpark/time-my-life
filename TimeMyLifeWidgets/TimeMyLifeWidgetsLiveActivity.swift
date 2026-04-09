@@ -44,15 +44,17 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
                 }
             } compactLeading: {
                 // MARK: - Compact Leading
-                activityIcon(context: context, size: 18)
+                Text(context.attributes.activityEmoji.isEmpty ? "⏱" : context.attributes.activityEmoji)
+                    .font(.system(size: 14))
             } compactTrailing: {
                 // MARK: - Compact Trailing
                 Text(
                     timerInterval: context.state.timerStartDate...Date.distantFuture,
                     countsDown: false
                 )
-                .font(.system(.caption2, design: .rounded, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .monospacedDigit()
+                .frame(width: 42)
             } minimal: {
                 // MARK: - Minimal
                 activityIcon(context: context, size: 22)
