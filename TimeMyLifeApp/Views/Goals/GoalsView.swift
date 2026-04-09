@@ -73,8 +73,8 @@ struct GoalsView: View {
                     onSave: { Task { await viewModel.loadGoals() } }
                 )
             }
-            .task {
-                await viewModel.loadGoals()
+            .onAppear {
+                Task { await viewModel.loadGoals() }
             }
         }
     }

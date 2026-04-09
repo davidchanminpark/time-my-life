@@ -75,6 +75,47 @@ final class GoalsViewModelTests: XCTestCase {
         XCTAssertEqual(sut.dailyGoalsWithProgress[0].streak, 5)
     }
 
+    func testDailyStreak_repairsAfterEditingTimeEntryAboveTarget() async throws {
+        // Scenario: streak should be 5 days, but the day-3 entry was logged short
+        // (30 min instead of the 1h target), breaking the streak. Editing that
+        // entry above the target should restore the full 5-day streak.
+        let a = try makeActivity()
+        try seedEntry(activityID: a.id, daysAgo: 0, seconds: 3600)
+        try seedEntry(activityID: a.id, daysAgo: 1, seconds: 3600)
+        try seedEntry(activityID: a.id, daysAgo: 2, seconds: 3600)
+        try seedEntry(activityID: a.id, daysAgo: 3, seconds: 1800) // short — breaks streak
+        try seedEntry(activityID: a.id, daysAgo: 4, seconds: 3600)
+        try makeGoal(activityID: a.id, createdDaysAgo: 5)
+
+        await sut.loadGoals()
+        XCTAssertEqual(sut.dailyGoalsWithProgress[0].streak, 3, "streak broken at day 3")
+
+        // User edits the short entry up to 1h via the Edit Time Entry flow
+        let dayThree = cal.date(byAdding: .day, value: -3, to: cal.startOfDay(for: Date()))!
+        try dataService.setTimeEntryDuration(activityID: a.id, date: dayThree, duration: 3600)
+
+        await sut.loadGoals()
+        XCTAssertEqual(sut.dailyGoalsWithProgress[0].streak, 5, "streak should be repaired")
+    }
+
+    func testDailyStreak_breaksAfterEditingPastEntryBelowTarget() async throws {
+        // Inverse of the repair scenario: streak is fully met, then user edits
+        // a day-3 entry DOWN below the target. Streak should drop accordingly.
+        let a = try makeActivity()
+        for d in 0...4 { try seedEntry(activityID: a.id, daysAgo: d, seconds: 3600) }
+        try makeGoal(activityID: a.id, createdDaysAgo: 5)
+
+        await sut.loadGoals()
+        XCTAssertEqual(sut.dailyGoalsWithProgress[0].streak, 5)
+
+        // Edit day 3 down to 30 minutes (below the 1h target)
+        let dayThree = cal.date(byAdding: .day, value: -3, to: cal.startOfDay(for: Date()))!
+        try dataService.setTimeEntryDuration(activityID: a.id, date: dayThree, duration: 1800)
+
+        await sut.loadGoals()
+        XCTAssertEqual(sut.dailyGoalsWithProgress[0].streak, 3, "streak should break at edited day")
+    }
+
     func testDailyStreak_breaksOnMissedDay() async throws {
         let a = try makeActivity()
         // today + 2 days ago (miss yesterday)

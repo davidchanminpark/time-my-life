@@ -119,9 +119,11 @@ struct ActivityTimerView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
-        .task {
-            await viewModel.loadAccumulatedTime()
-            viewModel.checkAndResumeTimer()
+        .onAppear {
+            Task {
+                await viewModel.loadAccumulatedTime()
+                viewModel.checkAndResumeTimer()
+            }
         }
     }
 }

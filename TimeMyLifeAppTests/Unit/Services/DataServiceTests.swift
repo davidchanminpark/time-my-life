@@ -98,6 +98,40 @@ final class DataServiceTests: XCTestCase {
         XCTAssertEqual(yesterdayEntries[0].totalDuration, 200)
     }
 
+    func testSetTimeEntryDuration_overwritesExistingEntry() throws {
+        let id = UUID()
+        let date = Date()
+        try sut.createOrUpdateTimeEntry(activityID: id, date: date, duration: 3600)
+
+        try sut.setTimeEntryDuration(activityID: id, date: date, duration: 1800)
+
+        let entries = try sut.fetchTimeEntries(for: id, on: date)
+        XCTAssertEqual(entries.count, 1)
+        XCTAssertEqual(entries[0].totalDuration, 1800)
+    }
+
+    func testSetTimeEntryDuration_createsEntryWhenNoneExists() throws {
+        let id = UUID()
+        let date = Date()
+
+        try sut.setTimeEntryDuration(activityID: id, date: date, duration: 2400)
+
+        let entries = try sut.fetchTimeEntries(for: id, on: date)
+        XCTAssertEqual(entries.count, 1)
+        XCTAssertEqual(entries[0].totalDuration, 2400)
+    }
+
+    func testSetTimeEntryDuration_clampsNegativeToZero() throws {
+        let id = UUID()
+        let date = Date()
+        try sut.createOrUpdateTimeEntry(activityID: id, date: date, duration: 3600)
+
+        try sut.setTimeEntryDuration(activityID: id, date: date, duration: -500)
+
+        let entries = try sut.fetchTimeEntries(for: id, on: date)
+        XCTAssertEqual(entries[0].totalDuration, 0)
+    }
+
     func testFetchTimeEntriesDateRange() throws {
         let id = UUID()
         let cal = Calendar.current
