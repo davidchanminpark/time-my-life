@@ -73,11 +73,10 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
             activityIcon(context: context, size: 50)
 
             Text(context.attributes.activityName)
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .font(.system(size: 20, weight: .semibold, design: .rounded))
                 .lineLimit(1)
-                .layoutPriority(1)
 
-            Spacer()
+            Spacer(minLength: 8)
 
             Text(
                 timerInterval: context.state.timerStartDate...Date.distantFuture,
@@ -87,6 +86,8 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
             .monospacedDigit()
             .multilineTextAlignment(.trailing)
             .foregroundStyle(activityColor(hex: context.attributes.activityColorHex))
+            .frame(minWidth: 90, alignment: .trailing)
+            
         }
         .padding(20)
         .activityBackgroundTint(Color(.systemBackground))
@@ -145,7 +146,7 @@ private extension Color {
 extension TimerActivityAttributes {
     fileprivate static var preview: TimerActivityAttributes {
         TimerActivityAttributes(
-            activityName: "Language Study",
+            activityName: "Language Study ",
             activityEmoji: "📚",
             activityColorHex: "#FFB3BA"
         )
