@@ -19,6 +19,8 @@ struct ActivityFormView: View {
     @State private var showEmojiPicker = false
     @State private var showAddTimeEntry = false
     @State private var showEditTimeEntry = false
+    @State private var toastMessage: String?
+    @State private var toastTask: Task<Void, Never>?
     @Environment(\.dismiss) private var dismiss
 
     init(mode: Mode, dataService: DataService) {
@@ -44,6 +46,11 @@ struct ActivityFormView: View {
     var body: some View {
         ZStack {
             Color.appBackground.ignoresSafeArea()
+
+            if let toastMessage {
+                toastBanner(message: toastMessage)
+                    .zIndex(1)
+            }
 
             ScrollView {
                 VStack(spacing: 14) {
@@ -98,12 +105,16 @@ struct ActivityFormView: View {
         }
         .sheet(isPresented: $showAddTimeEntry) {
             if case .edit(let activity) = mode {
-                AddTimeEntrySheet(activity: activity, dataService: dataService)
+                AddTimeEntrySheet(activity: activity, dataService: dataService) {
+                    showToast("Time entry added")
+                }
             }
         }
         .sheet(isPresented: $showEditTimeEntry) {
             if case .edit(let activity) = mode {
-                EditTimeEntrySheet(activity: activity, dataService: dataService)
+                EditTimeEntrySheet(activity: activity, dataService: dataService) {
+                    showToast("Time entry updated")
+                }
             }
         }
         .sheet(isPresented: $showEmojiPicker) {
@@ -127,6 +138,45 @@ struct ActivityFormView: View {
             }
         } message: {
             Text("This will permanently delete “\(viewModel.trimmedName)” and all associated time entries. This action cannot be undone.")
+        }
+    }
+
+    // MARK: - Toast
+
+    private func toastBanner(message: String) -> some View {
+        VStack(spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 36, weight: .semibold))
+                .foregroundStyle(Color.appAccent)
+            Text(message)
+                .font(.system(.title3, design: .rounded, weight: .semibold))
+                .foregroundStyle(.primary)
+        }
+        .padding(.horizontal, 32)
+        .padding(.vertical, 24)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color.appCardBackground)
+                .shadow(color: .black.opacity(0.15), radius: 20, x: 0, y: 6)
+        )
+        .transition(.scale(scale: 0.8).combined(with: .opacity))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .allowsHitTesting(false)
+    }
+
+    private func showToast(_ message: String) {
+        toastTask?.cancel()
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            toastMessage = message
+        }
+        toastTask = Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            if Task.isCancelled { return }
+            await MainActor.run {
+                withAnimation(.easeOut(duration: 0.25)) {
+                    toastMessage = nil
+                }
+            }
         }
     }
 
@@ -340,6 +390,7 @@ struct ActivityFormView: View {
 private struct AddTimeEntrySheet: View {
     let activity: Activity
     let dataService: DataService
+    let onSaved: () -> Void
 
     @Environment(\.dismiss) private var dismiss
 
@@ -476,6 +527,7 @@ private struct AddTimeEntrySheet: View {
                 date: selectedDate,
                 duration: totalSeconds
             )
+            onSaved()
             dismiss()
         } catch {
             errorMessage = "Failed to save: \(error.localizedDescription)"
@@ -488,14 +540,16 @@ private struct AddTimeEntrySheet: View {
 private struct EditTimeEntrySheet: View {
     let activity: Activity
     let dataService: DataService
+    let onSaved: () -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: EditTimeEntryViewModel
     @State private var showSaveConfirmation = false
 
-    init(activity: Activity, dataService: DataService) {
+    init(activity: Activity, dataService: DataService, onSaved: @escaping () -> Void) {
         self.activity = activity
         self.dataService = dataService
+        self.onSaved = onSaved
         _viewModel = State(wrappedValue: EditTimeEntryViewModel(
             activity: activity,
             dataService: dataService
@@ -552,7 +606,10 @@ private struct EditTimeEntrySheet: View {
                 Button("Cancel", role: .cancel) {}
                 Button("Update") {
                     Task {
-                        if await viewModel.save() { dismiss() }
+                        if await viewModel.save() {
+                            onSaved()
+                            dismiss()
+                        }
                     }
                 }
             } message: {
