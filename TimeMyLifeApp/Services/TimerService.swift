@@ -116,11 +116,13 @@ public class TimerService {
 
         // Start Live Activity (iOS only)
         #if os(iOS)
+        let accumulated = fetchAccumulatedTime(activityID: activity.id, date: normalizedDate)
         liveActivityService.start(
             activityName: activity.name,
             activityEmoji: activity.emoji,
             activityColorHex: activity.colorHex,
-            startDate: startTime!
+            startDate: startTime!,
+            accumulatedTime: accumulated
         )
         #endif
 
@@ -194,11 +196,13 @@ public class TimerService {
 
         // Start Live Activity on resume (iOS only)
         #if os(iOS)
+        let accumulated = fetchAccumulatedTime(activityID: activity.id, date: normalizedDate)
         liveActivityService.start(
             activityName: activity.name,
             activityEmoji: activity.emoji,
             activityColorHex: activity.colorHex,
-            startDate: startTime
+            startDate: startTime,
+            accumulatedTime: accumulated
         )
         #endif
 
@@ -336,6 +340,16 @@ public class TimerService {
     }
 
     // MARK: - Private Methods
+
+    /// Fetches the accumulated duration already logged for an activity on a given date.
+    private func fetchAccumulatedTime(activityID: UUID, date: Date) -> TimeInterval {
+        let normalizedDate = Calendar.current.startOfDay(for: date)
+        let predicate = #Predicate<TimeEntry> { entry in
+            entry.activityID == activityID && entry.date == normalizedDate
+        }
+        let descriptor = FetchDescriptor<TimeEntry>(predicate: predicate)
+        return (try? modelContext.fetch(descriptor).first?.totalDuration) ?? 0
+    }
 
     private func startTimerUpdates() {
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in

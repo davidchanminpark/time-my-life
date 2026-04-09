@@ -20,11 +20,18 @@ public final class LiveActivityService {
     // MARK: - Public Methods
 
     /// Starts a Live Activity for the given timer session.
+    /// - Parameters:
+    ///   - activityName: Display name of the activity
+    ///   - activityEmoji: Emoji icon for the activity
+    ///   - activityColorHex: Hex color string for the activity
+    ///   - startDate: When the timer started
+    ///   - accumulatedTime: Time already logged for this activity today (seconds)
     func start(
         activityName: String,
         activityEmoji: String,
         activityColorHex: String,
-        startDate: Date
+        startDate: Date,
+        accumulatedTime: TimeInterval = 0
     ) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
             #if DEBUG
@@ -39,8 +46,12 @@ public final class LiveActivityService {
             activityColorHex: activityColorHex
         )
 
+        // Offset the start date by accumulated time so the widget timer
+        // shows total time for the day, not just the current session.
+        let adjustedStartDate = startDate.addingTimeInterval(-accumulatedTime)
+
         let contentState = TimerActivityAttributes.ContentState(
-            timerStartDate: startDate
+            timerStartDate: adjustedStartDate
         )
 
         let content = ActivityContent(state: contentState, staleDate: nil)
