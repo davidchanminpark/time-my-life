@@ -46,6 +46,7 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
                 // MARK: - Compact Leading
                 Text(context.attributes.activityEmoji.isEmpty ? "⏱" : context.attributes.activityEmoji)
                     .font(.system(size: 14))
+                    .padding(.leading, 4)
             } compactTrailing: {
                 // MARK: - Compact Trailing
                 Text(
@@ -67,24 +68,27 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
 
     @ViewBuilder
     private func lockScreenView(context: ActivityViewContext<TimerActivityAttributes>) -> some View {
-        HStack(spacing: 14) {
-            activityIcon(context: context, size: 44)
+        HStack(spacing: 10) {
+            activityIcon(context: context, size: 38)
 
             Text(context.attributes.activityName)
                 .font(.system(.headline, design: .rounded, weight: .semibold))
                 .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .layoutPriority(1)
 
-            Spacer()
+            Spacer(minLength: 8)
 
             Text(
                 timerInterval: context.state.timerStartDate...Date.distantFuture,
                 countsDown: false
             )
-            .font(.system(.title, design: .rounded, weight: .bold))
+            .font(.system(.title3, design: .rounded, weight: .bold))
             .monospacedDigit()
             .multilineTextAlignment(.trailing)
             .frame(alignment: .trailing)
             .foregroundStyle(activityColor(hex: context.attributes.activityColorHex))
+            .fixedSize()
         }
         .padding(16)
         .activityBackgroundTint(Color(.systemBackground))
