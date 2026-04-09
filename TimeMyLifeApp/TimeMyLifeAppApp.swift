@@ -202,6 +202,7 @@ struct TimeMyLifeAppApp: App {
     /// Saves the running timer's elapsed time to the TimeEntry as a checkpoint.
     /// Called when the app goes to background so the duration is preserved
     /// even if the user force-kills the app from the app switcher.
+    /// TODO: Replace with server-side APNs save once Apple Developer Program is available.
     private func checkpointRunningTimer() {
         guard timerService.isRunning,
               let activity = timerService.currentActivity,

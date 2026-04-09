@@ -10,6 +10,10 @@ import Foundation
 private typealias LiveActivity = ActivityKit.Activity<TimerActivityAttributes>
 
 /// Manages the timer Live Activity lifecycle (start, update, end).
+///
+/// Note: When the app is force-killed, the Live Activity persists until the app relaunches
+/// and calls `endAll()`. Instant dismissal on kill would require APNs push updates via a
+/// backend server and the Apple Developer Program — not available in this setup.
 @MainActor
 public final class LiveActivityService {
 
