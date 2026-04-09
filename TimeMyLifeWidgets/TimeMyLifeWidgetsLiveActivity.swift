@@ -55,7 +55,7 @@ struct TimeMyLifeWidgetsLiveActivity: Widget {
                 )
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .monospacedDigit()
-                .frame(width: 30)
+                .frame(width: 40)
                 .padding(.trailing, 0)
             } minimal: {
                 // MARK: - Minimal
