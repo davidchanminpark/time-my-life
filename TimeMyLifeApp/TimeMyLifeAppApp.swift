@@ -164,19 +164,39 @@ struct TimeMyLifeAppApp: App {
         }
     }
 
-    /// Checks if a timer is running when app becomes active
+    /// Checks if a timer was left running from a previous session (e.g. force-kill).
+    /// Saves the elapsed time, stops the timer, and cleans up stale Live Activities.
     private func checkForRunningTimer() {
         Task { @MainActor in
             do {
                 let context = modelContainer.mainContext
-                let timer = try ActiveTimer.shared(in: context)
+                let activeTimer = try ActiveTimer.shared(in: context)
 
-                if timer.isRunning {
+                // Clean up any Live Activities left over from a previous app session
+                // (e.g. after a force-kill where we had no chance to end them).
+                timerService.endAllLiveActivities()
+
+                if activeTimer.isRunning,
+                   let activityID = activeTimer.activityID,
+                   let startTime = activeTimer.startTime,
+                   let startDate = activeTimer.startDate {
+                    // Save the elapsed time from the orphaned timer session
+                    let elapsed = Date().timeIntervalSince(startTime)
+                    try dataService.createOrUpdateTimeEntry(
+                        activityID: activityID,
+                        date: startDate,
+                        duration: elapsed
+                    )
+
+                    // Clear the active timer state
+                    activeTimer.activityID = nil
+                    activeTimer.startTime = nil
+                    activeTimer.startDate = nil
+                    activeTimer.isRunning = false
+                    try context.save()
+
                     #if DEBUG
-                    if let startTime = timer.startTime {
-                        let elapsed = Date().timeIntervalSince(startTime)
-                        print("✅ Timer is running - elapsed: \(formatElapsed(elapsed))")
-                    }
+                    print("✅ Orphaned timer saved and stopped - elapsed: \(formatElapsed(elapsed))")
                     #endif
                 }
             } catch {

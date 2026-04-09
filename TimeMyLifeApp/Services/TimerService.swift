@@ -65,10 +65,15 @@ public class TimerService {
     private var timer: Timer?
     private var startTime: Date?
     private let modelContext: ModelContext
-    
+
     // Combine subjects for publishing changes
     private let elapsedTimeSubject = CurrentValueSubject<TimeInterval, Never>(0)
     private let isRunningSubject = CurrentValueSubject<Bool, Never>(false)
+
+    #if os(iOS)
+    /// Service for managing the Live Activity (Lock Screen / Dynamic Island)
+    private let liveActivityService = LiveActivityService()
+    #endif
 
     // MARK: - Initialization
 
@@ -109,6 +114,18 @@ public class TimerService {
         // Start UI updates
         startTimerUpdates()
 
+        // Start Live Activity (iOS only)
+        #if os(iOS)
+        let accumulated = fetchAccumulatedTime(activityID: activity.id, date: normalizedDate)
+        liveActivityService.start(
+            activityName: activity.name,
+            activityEmoji: activity.emoji,
+            activityColorHex: activity.colorHex,
+            startDate: startTime!,
+            accumulatedTime: accumulated
+        )
+        #endif
+
         #if DEBUG
         print("✅ TimerService: Started timer for '\(activity.name)'")
         #endif
@@ -138,6 +155,11 @@ public class TimerService {
 
         // Stop UI updates
         stopTimerUpdates()
+
+        // End Live Activity (iOS only)
+        #if os(iOS)
+        liveActivityService.stop()
+        #endif
 
         // Reset local state
         self.isRunning = false
@@ -171,6 +193,18 @@ public class TimerService {
 
         // Start UI updates
         startTimerUpdates()
+
+        // Start Live Activity on resume (iOS only)
+        #if os(iOS)
+        let accumulated = fetchAccumulatedTime(activityID: activity.id, date: normalizedDate)
+        liveActivityService.start(
+            activityName: activity.name,
+            activityEmoji: activity.emoji,
+            activityColorHex: activity.colorHex,
+            startDate: startTime,
+            accumulatedTime: accumulated
+        )
+        #endif
 
         #if DEBUG
         print("✅ TimerService: Resumed timer for '\(activity.name)', elapsed: \(formatDuration(elapsedTime))")
@@ -242,6 +276,13 @@ public class TimerService {
         return try ActiveTimer.shared(in: modelContext)
     }
 
+    /// Ends all Live Activities (cleanup after force-kill or stale state).
+    public func endAllLiveActivities() {
+        #if os(iOS)
+        liveActivityService.endAll()
+        #endif
+    }
+
     /// Resets the timer state (for testing/clearing data)
     /// - Throws: Error if save fails
     public func reset() throws {
@@ -257,6 +298,11 @@ public class TimerService {
         activeTimer.startDate = nil
         activeTimer.isRunning = false
         try modelContext.save()
+
+        // End all Live Activities (iOS only)
+        #if os(iOS)
+        liveActivityService.endAll()
+        #endif
 
         #if DEBUG
         print("✅ TimerService: Reset timer state")
@@ -301,6 +347,19 @@ public class TimerService {
     }
 
     // MARK: - Private Methods
+
+    /// Fetches the accumulated duration already logged for an activity on a given date.
+    /// The Live Activity widget runs in a separate process and can't observe the app's
+    /// in-memory timer state. We offset its start date by the accumulated time so the
+    /// widget's `Text(.timerInterval:)` produces the same total as the in-app display.
+    private func fetchAccumulatedTime(activityID: UUID, date: Date) -> TimeInterval {
+        let normalizedDate = Calendar.current.startOfDay(for: date)
+        let predicate = #Predicate<TimeEntry> { entry in
+            entry.activityID == activityID && entry.date == normalizedDate
+        }
+        let descriptor = FetchDescriptor<TimeEntry>(predicate: predicate)
+        return (try? modelContext.fetch(descriptor).first?.totalDuration) ?? 0
+    }
 
     private func startTimerUpdates() {
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
