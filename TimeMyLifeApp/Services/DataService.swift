@@ -292,10 +292,34 @@ public class DataService {
             action = .create
         }
 
+        // Editing a past day can repair OR break a previously-computed streak.
+        // `GoalsViewModel.updateDailyStreak` is incremental and only walks
+        // forward from `goal.lastStreakDate`, so without this reset the streak
+        // would never recompute the edited day. Clearing the cached streak
+        // state forces the next `loadGoals()` to rebuild from `goal.createdDate`.
+        try invalidateDailyStreakCache(activityID: activityID)
+
         try modelContext.save()
 
         Task {
             try? await syncService?.syncModel(timeEntry, type: .timeEntry, action: action)
+        }
+    }
+
+    /// Resets cached daily-streak state on every daily goal for the given activity
+    /// so the next `GoalsViewModel.loadGoals()` recomputes from scratch.
+    /// Caller is responsible for `modelContext.save()`.
+    /// (SwiftData cannot filter on enum properties in `#Predicate`, so the
+    /// frequency check happens in-memory — same pattern as `fetchGoals`.)
+    private func invalidateDailyStreakCache(activityID: UUID) throws {
+        let predicate = #Predicate<Goal> { goal in
+            goal.activityID == activityID
+        }
+        let descriptor = FetchDescriptor<Goal>(predicate: predicate)
+        let goals = try modelContext.fetch(descriptor).filter { $0.frequency == .daily }
+        for goal in goals {
+            goal.currentStreak = 0
+            goal.lastStreakDate = nil
         }
     }
 
