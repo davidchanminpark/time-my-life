@@ -243,7 +243,16 @@ public class DataService {
             timeEntry = newEntry
             action = .create
         }
-        
+
+        // Adding time to a *past* day can push it across the goal target and
+        // change a streak that the GoalsViewModel cache has already frozen
+        // (see `setTimeEntryDuration` for the full explanation). Today is
+        // computed live in `loadGoals`, so we only need to invalidate when
+        // the entry is for a previous day.
+        if normalizedDate < Calendar.current.startOfDay(for: Date()) {
+            try invalidateDailyStreakCache(activityID: activityID)
+        }
+
         try modelContext.save()
 
         // Sync to counterpart device
