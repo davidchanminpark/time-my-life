@@ -98,6 +98,31 @@ final class GoalsViewModelTests: XCTestCase {
         XCTAssertEqual(sut.dailyGoalsWithProgress[0].streak, 5, "streak should be repaired")
     }
 
+    func testDailyStreak_repairsAfterAddingTimeToShortPastEntry() async throws {
+        // Same scenario as the edit-flow repair test, but exercising the
+        // accumulating `createOrUpdateTimeEntry` path used by Add Time Entry.
+        // Day 3 was logged short (30 min); user later adds 30 more min via
+        // Add Time Entry, pushing it above the 1h target. Streak should
+        // recompute from scratch.
+        let a = try makeActivity()
+        try seedEntry(activityID: a.id, daysAgo: 0, seconds: 3600)
+        try seedEntry(activityID: a.id, daysAgo: 1, seconds: 3600)
+        try seedEntry(activityID: a.id, daysAgo: 2, seconds: 3600)
+        try seedEntry(activityID: a.id, daysAgo: 3, seconds: 1800) // short
+        try seedEntry(activityID: a.id, daysAgo: 4, seconds: 3600)
+        try makeGoal(activityID: a.id, createdDaysAgo: 5)
+
+        await sut.loadGoals()
+        XCTAssertEqual(sut.dailyGoalsWithProgress[0].streak, 3, "streak broken at day 3")
+
+        // Add 30 min to day 3 via the accumulating path
+        let dayThree = cal.date(byAdding: .day, value: -3, to: cal.startOfDay(for: Date()))!
+        try dataService.createOrUpdateTimeEntry(activityID: a.id, date: dayThree, duration: 1800)
+
+        await sut.loadGoals()
+        XCTAssertEqual(sut.dailyGoalsWithProgress[0].streak, 5, "streak should be repaired")
+    }
+
     func testDailyStreak_breaksAfterEditingPastEntryBelowTarget() async throws {
         // Inverse of the repair scenario: streak is fully met, then user edits
         // a day-3 entry DOWN below the target. Streak should drop accordingly.
