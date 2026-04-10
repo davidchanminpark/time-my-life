@@ -12,8 +12,8 @@ struct YearlyStatsView: View {
     let dataService: DataService
 
     @State private var viewModel: YearlyStatsViewModel
-    @State private var shareItem: ShareableImage?
-    @State private var isRendering = false
+    @State private var cachedShareImage: UIImage?
+    @State private var cachedShareURL: URL?
     @State private var showAllActivities = false
 
     init(dataService: DataService) {
@@ -50,20 +50,34 @@ struct YearlyStatsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button { renderAndShare() } label: {
-                    if isRendering {
-                        ProgressView().controlSize(.small)
-                    } else {
+                if let url = cachedShareURL, let image = cachedShareImage {
+                    ShareLink(
+                        item: url,
+                        preview: SharePreview(
+                            String(viewModel.selectedYear) + " in Review",
+                            image: Image(uiImage: image)
+                        )
+                    ) {
                         Image(systemName: "square.and.arrow.up")
+                            .offset(y: -3)
                     }
+                    .foregroundStyle(Color.appAccent)
+                } else {
+                    Button { } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .offset(y: -3)
+                    }
+                    .disabled(true)
+                    .foregroundStyle(Color.appAccent)
                 }
-                .disabled(viewModel.totalHours == 0 || isRendering)
-                .foregroundStyle(Color.appAccent)
             }
         }
-        .task { await viewModel.loadYear(viewModel.selectedYear) }
-        .sheet(item: $shareItem) { item in
-            ShareSheet(image: item.image)
+        .task {
+            await viewModel.loadYear(viewModel.selectedYear)
+            guard viewModel.totalHours > 0 else { return }
+            // Let the navigation animation settle before blocking the main thread
+            try? await Task.sleep(for: .milliseconds(400))
+            prerenderShareCard()
         }
     }
 
@@ -72,7 +86,16 @@ struct YearlyStatsView: View {
     private var yearPicker: some View {
         Picker("Year", selection: Binding(
             get: { viewModel.selectedYear },
-            set: { (year: Int) in Task { await viewModel.loadYear(year) } }
+            set: { (year: Int) in
+                cachedShareImage = nil
+                cachedShareURL = nil
+                Task {
+                    await viewModel.loadYear(year)
+                    guard viewModel.totalHours > 0 else { return }
+                    try? await Task.sleep(for: .milliseconds(400))
+                    prerenderShareCard()
+                }
+            }
         )) {
             ForEach(viewModel.availableYears, id: \.self) { year in
                 Text(String(year)).tag(year)
@@ -339,7 +362,7 @@ struct YearlyStatsView: View {
 
     private var emptyState: some View {
         ContentUnavailableView(
-            "No Data for \(viewModel.selectedYear)",
+            "No Data for \(String(viewModel.selectedYear))",
             systemImage: "calendar",
             description: Text("Start tracking activities to see your yearly summary.")
         )
@@ -348,36 +371,21 @@ struct YearlyStatsView: View {
 
     // MARK: - Share
 
-    private func renderAndShare() {
-        guard !isRendering else { return }
-        isRendering = true
+    private func prerenderShareCard() {
+        cachedShareImage = nil
+        cachedShareURL = nil
         Task { @MainActor in
-            defer { isRendering = false }
             let card = YearShareCard(viewModel: viewModel)
             let renderer = ImageRenderer(content: card.frame(width: 360))
             renderer.scale = 3.0
-            if let uiImage = renderer.uiImage {
-                shareItem = ShareableImage(image: uiImage)
-            }
+            guard let uiImage = renderer.uiImage, let data = uiImage.pngData() else { return }
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("year-in-review-\(viewModel.selectedYear).png")
+            try? data.write(to: url)
+            cachedShareImage = uiImage
+            cachedShareURL = url
         }
     }
-}
-
-// MARK: - Share Support Types
-
-struct ShareableImage: Identifiable {
-    let id = UUID()
-    let image: UIImage
-}
-
-struct ShareSheet: UIViewControllerRepresentable {
-    let image: UIImage
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: [image], applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Share Card (rendered to image)
@@ -390,7 +398,7 @@ private struct YearShareCard: View {
             // Title
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(viewModel.selectedYear) in Review")
+                    Text(String(viewModel.selectedYear) + " in Review")
                         .font(.title2)
                         .fontWeight(.bold)
                     Text("Time My Life")
@@ -409,22 +417,64 @@ private struct YearShareCard: View {
             HStack(spacing: 0) {
                 shareHeroItem(value: String(format: "%.0fh", viewModel.totalHours), label: "Total Hours")
                 shareHeroItem(value: "\(viewModel.activitiesCount)", label: "Activities")
-                shareHeroItem(value: "\(viewModel.activityStreaks.first?.longestStreak ?? 0)d", label: "Best Streak")
             }
 
-            // Top 3 activities
-            if !viewModel.topActivities.isEmpty {
+            // Pie chart + top activities side by side
+            if !viewModel.activityStats.isEmpty {
+                HStack(alignment: .top, spacing: 16) {
+                    Chart(viewModel.activityStats) { stat in
+                        SectorMark(
+                            angle: .value("Duration", stat.totalDuration),
+                            innerRadius: .ratio(0.5),
+                            angularInset: 1.2
+                        )
+                        .cornerRadius(3)
+                        .foregroundStyle(stat.color)
+                    }
+                    .frame(width: 90, height: 90)
+                    .chartLegend(.hidden)
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Top Activities")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                        ForEach(viewModel.activityStats.prefix(5)) { stat in
+                            HStack(spacing: 5) {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(stat.color)
+                                    .frame(width: 8, height: 8)
+                                Text(stat.activity.name)
+                                    .font(.caption)
+                                    .lineLimit(1)
+                                Spacer(minLength: 4)
+                                Text(String(format: "%.0fh", stat.hours))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .monospacedDigit()
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+
+            // Top 3 longest streaks
+            if !viewModel.activityStreaks.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Top Activities")
+                    Text("Longest Streaks")
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
-                    ForEach(viewModel.topActivities.prefix(3)) { stat in
-                        HStack {
-                            Circle().fill(stat.activity.color()).frame(width: 8, height: 8)
-                            Text(stat.activity.name).font(.caption)
+                    ForEach(viewModel.activityStreaks.prefix(3)) { streak in
+                        HStack(spacing: 6) {
+                            Text("🔥").font(.caption)
+                            Circle()
+                                .fill(streak.activity.color())
+                                .frame(width: 8, height: 8)
+                            Text(streak.activity.name).font(.caption).lineLimit(1)
                             Spacer()
-                            Text(String(format: "%.0fh", stat.hours))
+                            Text("\(streak.longestStreak) days")
                                 .font(.caption)
                                 .fontWeight(.semibold)
                                 .monospacedDigit()
