@@ -8,6 +8,7 @@ import SwiftData
 
 struct HomeView: View {
     @State private var viewModel: MainViewModel
+    @State private var greetingText: String = ""
 
     @AppStorage("midnightModePreference") private var midnightModePreference: String = "unset"
     @AppStorage("lastMidnightPromptDate") private var lastMidnightPromptDate: String = ""
@@ -36,28 +37,36 @@ struct HomeView: View {
         )
     }
 
-    private var greetingText: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        switch hour {
-        case 5..<9:   return "Rise & thrive"
-        case 9..<12:  return "In your flow"
-        case 12..<15: return "Keep the momentum"
-        case 15..<18: return "Finish strong"
-        case 18..<22: return "Reflect & recharge"
-        default:      return "Night owl mode"
-        }
-    }
-
     private var greetingEmoji: String {
         let hour = Calendar.current.component(.hour, from: Date())
         switch hour {
-        case 5..<9:   return "✨"
-        case 9..<12:  return "⚡"
-        case 12..<15: return "🔥"
-        case 15..<18: return "💪"
-        case 18..<22: return "🌙"
-        default:      return "🦉"
+        case 5..<9:   return "🌅"
+        case 9..<12:  return "🌱"
+        case 12..<15: return "☀️"
+        case 15..<18: return "🍂"
+        case 18..<22: return "🌇"
+        default:      return "🌙"
         }
+    }
+
+    private func randomGreeting() -> String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let options: [String]
+        switch hour {
+        case 5..<9:
+            options = ["Rise & thrive", "Early bird wins", "Make it count", "Fresh start"]
+        case 9..<12:
+            options = ["In your flow", "Deep focus time", "Lock in", "On a roll"]
+        case 12..<15:
+            options = ["Keep the momentum", "Midday grind", "Stay locked in", "Halfway there"]
+        case 15..<18:
+            options = ["Finish strong", "Push through", "Final stretch", "Don't slow down"]
+        case 18..<22:
+            options = ["Reflect & recharge", "Wind down well", "Good work today", "Evening mode"]
+        default:
+            options = ["Night owl mode", "Burning the midnight oil", "Late night grind", "Still going"]
+        }
+        return options.randomElement() ?? options[0]
     }
 
     private var formattedDate: String {
@@ -116,6 +125,7 @@ struct HomeView: View {
                 todayDateString: todayDateString
             ))
             .onAppear {
+                greetingText = randomGreeting()
                 Task {
                     await viewModel.loadActivities()
                     checkMidnightModePrompt()
