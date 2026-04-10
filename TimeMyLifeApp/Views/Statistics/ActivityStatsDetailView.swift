@@ -81,7 +81,7 @@ struct ActivityStatsDetailView: View {
                         .font(.system(.subheadline, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
-                Text("\(Calendar.current.component(.year, from: Date())) statistics")
+                Text(verbatim: "\(Calendar.current.component(.year, from: Date())) statistics")
                     .font(.system(.caption, design: .rounded))
                     .foregroundStyle(.tertiary)
             }
