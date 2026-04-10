@@ -173,4 +173,31 @@ final class EditTimeEntryViewModelTests: XCTestCase {
         let entries = try dataService.fetchTimeEntries(for: activity.id, on: date)
         XCTAssertEqual(entries[0].totalDuration, 0)
     }
+
+    // MARK: - deleteSelectedEntry
+
+    func test_deleteSelectedEntry_removesEntryAndClearsSelection() async throws {
+        try seedEntry(daysAgo: 0, seconds: 3600)
+        let sut = makeSut()
+        sut.loadRecentEntries()
+        sut.selectedEntry = sut.recentEntries.first
+
+        let success = await sut.deleteSelectedEntry()
+
+        XCTAssertTrue(success)
+        XCTAssertNil(sut.selectedEntry)
+        XCTAssertTrue(sut.recentEntries.isEmpty)
+        let date = cal.startOfDay(for: Date())
+        let entries = try dataService.fetchTimeEntries(for: activity.id, on: date)
+        XCTAssertTrue(entries.isEmpty)
+    }
+
+    func test_deleteSelectedEntry_failsWhenNothingSelected() async {
+        let sut = makeSut()
+
+        let success = await sut.deleteSelectedEntry()
+
+        XCTAssertFalse(success)
+        XCTAssertNotNil(sut.errorMessage)
+    }
 }

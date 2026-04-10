@@ -16,8 +16,6 @@ struct SettingsView: View {
 
     /// "always" = always continue past midnight, "no" = never, "unset"/"today" = prompt
     @AppStorage("midnightModePreference") private var midnightMode: String = "unset"
-    /// 1 = Sunday, 2 = Monday
-    @AppStorage("firstDayOfWeek") private var firstDayOfWeek: Int = 1
     /// Appearance override: "system" | "light" | "dark"
     @AppStorage("appearancePreference") private var appearancePreferenceRaw: String = AppearancePreference.system.rawValue
     /// Unix timestamp of last successful sync
@@ -31,9 +29,9 @@ struct SettingsView: View {
 
     @State private var isSyncing = false
     @State private var syncError: String? = nil
+    #if DEBUG
     @State private var showClearConfirm = false
     @State private var showClearSuccess = false
-    #if DEBUG
     @State private var showSeedConfirm = false
     @State private var isSeeding = false
     @State private var showSeedSuccess = false
@@ -53,12 +51,10 @@ struct SettingsView: View {
                 generalSection
                 notificationsSection
                 activitiesSection
-                dataSection
                 if syncService != nil { syncSection }
                 #if DEBUG
                 debugSection
                 #endif
-                aboutSection
             }
             .scrollContentBackground(.hidden)
             .background(Color.appBackground)
@@ -72,6 +68,7 @@ struct SettingsView: View {
             .onReceive(NotificationCenter.default.publisher(for: .activityDidSync)) { _ in
                 lastSyncTimestamp = Date().timeIntervalSince1970
             }
+            #if DEBUG
             .alert("Clear All Data?", isPresented: $showClearConfirm) {
                 Button("Clear Everything", role: .destructive) {
                     Task { await clearAllData() }
@@ -85,7 +82,6 @@ struct SettingsView: View {
             } message: {
                 Text("All data has been deleted.")
             }
-            #if DEBUG
             .alert("Load Sample Year?", isPresented: $showSeedConfirm) {
                 Button("Load Data", role: .destructive) {
                     Task { await seedYearOfData() }
@@ -121,18 +117,6 @@ struct SettingsView: View {
                 } icon: {
                     Image(systemName: "moon.fill")
                         .foregroundStyle(.indigo)
-                }
-            }
-
-            Picker(selection: $firstDayOfWeek) {
-                Text("Sunday").tag(1)
-                Text("Monday").tag(2)
-            } label: {
-                Label {
-                    Text("First Day of Week")
-                } icon: {
-                    Image(systemName: "calendar")
-                        .foregroundStyle(Color.appAccent)
                 }
             }
 
@@ -271,18 +255,6 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Data Section
-
-    private var dataSection: some View {
-        Section("Data") {
-            Button(role: .destructive) {
-                showClearConfirm = true
-            } label: {
-                Label("Clear All Data", systemImage: "trash")
-            }
-        }
-    }
-
     // MARK: - Sync Section
 
     @ViewBuilder
@@ -346,6 +318,12 @@ struct SettingsView: View {
     #if DEBUG
     private var debugSection: some View {
         Section("Developer") {
+            Button(role: .destructive) {
+                showClearConfirm = true
+            } label: {
+                Label("Clear All Data", systemImage: "trash")
+            }
+
             Button {
                 showSeedConfirm = true
             } label: {
@@ -371,22 +349,6 @@ struct SettingsView: View {
         }
     }
     #endif
-
-    // MARK: - About Section
-
-    private var aboutSection: some View {
-        Section("About") {
-            LabeledContent("Version") {
-                Text(appVersion)
-                    .foregroundStyle(.secondary)
-            }
-            LabeledContent("Build") {
-                Text(appBuild)
-                    .foregroundStyle(.secondary)
-                    
-            }
-        }
-    }
 
     // MARK: - Computed Helpers
 
@@ -423,14 +385,6 @@ struct SettingsView: View {
         return date.formatted(.dateTime.month(.abbreviated).day())
     }
 
-    private var appVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
-    }
-
-    private var appBuild: String {
-        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-    }
-
     // MARK: - Actions
 
     private func forceSyncNow() async {
@@ -459,6 +413,7 @@ struct SettingsView: View {
     }
     #endif
 
+    #if DEBUG
     private func clearAllData() async {
         do {
             try dataService.clearAllData()
@@ -472,6 +427,7 @@ struct SettingsView: View {
             print("Error clearing data: \(error)")
         }
     }
+    #endif
 }
 
 #Preview("Settings") {

@@ -336,8 +336,14 @@ public class DataService {
     /// - Parameter entry: TimeEntry to delete
     /// - Throws: Error if save fails
     public func deleteTimeEntry(_ entry: TimeEntry) throws {
+        let entryId = entry.id
+        let activityID = entry.activityID
+        try invalidateDailyStreakCache(activityID: activityID)
         modelContext.delete(entry)
         try modelContext.save()
+        Task {
+            try? await syncService?.syncDelete(id: entryId, type: .timeEntry)
+        }
     }
     
     // MARK: - Batch Operations

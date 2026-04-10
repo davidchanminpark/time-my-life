@@ -112,9 +112,12 @@ struct ActivityFormView: View {
         }
         .sheet(isPresented: $showEditTimeEntry) {
             if case .edit(let activity) = mode {
-                EditTimeEntrySheet(activity: activity, dataService: dataService) {
-                    showToast("Time entry updated")
-                }
+                EditTimeEntrySheet(
+                    activity: activity,
+                    dataService: dataService,
+                    onSaved: { showToast("Time entry updated") },
+                    onDeleted: { showToast("Time entry deleted") }
+                )
             }
         }
         .sheet(isPresented: $showEmojiPicker) {
@@ -541,15 +544,23 @@ private struct EditTimeEntrySheet: View {
     let activity: Activity
     let dataService: DataService
     let onSaved: () -> Void
+    let onDeleted: () -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: EditTimeEntryViewModel
     @State private var showSaveConfirmation = false
+    @State private var showDeleteConfirmation = false
 
-    init(activity: Activity, dataService: DataService, onSaved: @escaping () -> Void) {
+    init(
+        activity: Activity,
+        dataService: DataService,
+        onSaved: @escaping () -> Void,
+        onDeleted: @escaping () -> Void
+    ) {
         self.activity = activity
         self.dataService = dataService
         self.onSaved = onSaved
+        self.onDeleted = onDeleted
         _viewModel = State(wrappedValue: EditTimeEntryViewModel(
             activity: activity,
             dataService: dataService
@@ -598,7 +609,7 @@ private struct EditTimeEntrySheet: View {
                                 .font(.system(.body, design: .rounded, weight: .semibold))
                                 .foregroundStyle(viewModel.canSave ? Color.appAccent : Color.secondary)
                         }
-                        .disabled(!viewModel.canSave)
+                        .disabled(!viewModel.canSave || viewModel.isDeleting)
                     }
                 }
             }
@@ -614,6 +625,18 @@ private struct EditTimeEntrySheet: View {
                 }
             } message: {
                 Text("This will overwrite the duration for the selected entry.")
+            }
+            .alert("Delete Time Entry?", isPresented: $showDeleteConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete", role: .destructive) {
+                    Task {
+                        if await viewModel.deleteSelectedEntry() {
+                            onDeleted()
+                        }
+                    }
+                }
+            } message: {
+                Text("This removes this day's logged time for this activity. This cannot be undone.")
             }
             .onAppear { viewModel.loadRecentEntries() }
         }
@@ -711,6 +734,21 @@ private struct EditTimeEntrySheet: View {
                 .frame(maxWidth: .infinity)
             }
             .frame(height: 150)
+
+            Divider()
+                .padding(.top, 4)
+
+            Button(role: .destructive) {
+                showDeleteConfirmation = true
+            } label: {
+                Text("Delete Time Entry")
+                    .font(.system(.body, design: .rounded, weight: .semibold))
+                    .foregroundStyle(.red)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
+            }
+            .buttonStyle(.plain)
+            .disabled(viewModel.isDeleting)
         }
         .padding(18)
         .appCard()

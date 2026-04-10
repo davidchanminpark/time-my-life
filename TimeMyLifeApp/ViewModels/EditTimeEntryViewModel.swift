@@ -33,6 +33,7 @@ final class EditTimeEntryViewModel {
     var selectedMinute: Int = 0
 
     var isSaving = false
+    var isDeleting = false
     var errorMessage: String?
 
     // MARK: - Computed
@@ -45,7 +46,7 @@ final class EditTimeEntryViewModel {
     /// Whether the current picker state represents a valid save (an entry is
     /// selected and the duration differs from the entry's existing value).
     var canSave: Bool {
-        guard let selected = selectedEntry else { return false }
+        guard !isDeleting, let selected = selectedEntry else { return false }
         return totalSeconds != selected.totalDuration
     }
 
@@ -109,6 +110,30 @@ final class EditTimeEntryViewModel {
             return true
         } catch {
             errorMessage = "Failed to save: \(error.localizedDescription)"
+            return false
+        }
+    }
+
+    // MARK: - Delete
+
+    /// Deletes the selected time entry from the store. Clears selection and
+    /// reloads the recent list on success.
+    @discardableResult
+    func deleteSelectedEntry() async -> Bool {
+        guard let entry = selectedEntry else {
+            errorMessage = "Select a time entry first"
+            return false
+        }
+        isDeleting = true
+        defer { isDeleting = false }
+
+        do {
+            try dataService.deleteTimeEntry(entry)
+            selectedEntry = nil
+            loadRecentEntries()
+            return true
+        } catch {
+            errorMessage = "Failed to delete: \(error.localizedDescription)"
             return false
         }
     }
