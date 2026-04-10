@@ -129,6 +129,20 @@
 			);
 			target = 85ACE4432EE8CC570095117F /* TimeMyLifeWatch Watch App */;
 		};
+		85AEEF112F8784F400A704A2 /* Exceptions for "TimeMyLifeWidgets" folder in "TimeMyLifeWidgetsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 85AEEEF82F8784F400A704A2 /* TimeMyLifeWidgetsExtension */;
+		};
+		85AEEF202F8785A000A704A2 /* Exceptions for "TimeMyLifeApp" folder in "TimeMyLifeWidgetsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Models/TimerActivityAttributes.swift,
+			);
+			target = 85AEEEF82F8784F400A704A2 /* TimeMyLifeWidgetsExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -137,6 +151,7 @@
 			exceptions = (
 				85ACE39D2EE8C28C0095117F /* Exceptions for "TimeMyLifeApp" folder in "TimeMyLifeApp" target */,
 				85ACE4702EE8DC260095117F /* Exceptions for "TimeMyLifeApp" folder in "TimeMyLifeWatch Watch App" target */,
+				85AEEF202F8785A000A704A2 /* Exceptions for "TimeMyLifeApp" folder in "TimeMyLifeWidgetsExtension" target */,
 			);
 			path = TimeMyLifeApp;
 			sourceTree = "<group>";
@@ -168,6 +183,9 @@
 		};
 		85AEEEFF2F8784F400A704A2 /* TimeMyLifeWidgets */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				85AEEF112F8784F400A704A2 /* Exceptions for "TimeMyLifeWidgets" folder in "TimeMyLifeWidgetsExtension" target */,
+			);
 			path = TimeMyLifeWidgets;
 			sourceTree = "<group>";
 		};
