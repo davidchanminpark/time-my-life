@@ -40,7 +40,7 @@ struct GoalCardView: View {
                     }
 
                     // Progress text
-                    Text("\(formatDuration(goalWithProgress.currentProgress)) / \(formatDuration(goalWithProgress.targetSeconds))")
+                    Text("\(goalWithProgress.currentProgress.formattedDuration(style: .compactNoSeconds)) / \(goalWithProgress.targetSeconds.formattedDuration(style: .compactNoSeconds))")
                         .font(.system(.subheadline, design: .rounded))
                         .foregroundStyle(.secondary)
 
@@ -57,14 +57,6 @@ struct GoalCardView: View {
         .buttonStyle(.plain)
     }
 
-    private func formatDuration(_ seconds: TimeInterval) -> String {
-        let total = Int(seconds)
-        let hours = total / 3600
-        let minutes = (total % 3600) / 60
-        if hours > 0 && minutes > 0 { return "\(hours)h \(minutes)m" }
-        if hours > 0 { return "\(hours)h" }
-        return "\(minutes)m"
-    }
 }
 
 #Preview {

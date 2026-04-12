@@ -209,7 +209,7 @@ struct DayDetailView: View {
                                         Text(item.name)
                                             .font(.system(.subheadline, design: .rounded))
                                         Spacer()
-                                        Text(formatDuration(item.duration))
+                                        Text(item.duration.formattedDuration(style: .compactNoSeconds))
                                             .font(.system(.subheadline, design: .rounded, weight: .semibold))
                                             .foregroundStyle(.secondary)
                                             .monospacedDigit()
@@ -228,7 +228,7 @@ struct DayDetailView: View {
                             Text("Total")
                                 .font(.system(.subheadline, design: .rounded, weight: .semibold))
                             Spacer()
-                            Text(formatDuration(dayData.totalDuration))
+                            Text(dayData.totalDuration.formattedDuration(style: .compactNoSeconds))
                                 .font(.system(.subheadline, design: .rounded, weight: .semibold))
                                 .monospacedDigit()
                         }
@@ -252,10 +252,4 @@ struct DayDetailView: View {
         }
     }
 
-    private func formatDuration(_ s: TimeInterval) -> String {
-        let h = Int(s) / 3600, m = (Int(s) % 3600) / 60
-        if h > 0 && m > 0 { return "\(h)h \(m)m" }
-        if h > 0 { return "\(h)h" }
-        return "\(m)m"
-    }
 }

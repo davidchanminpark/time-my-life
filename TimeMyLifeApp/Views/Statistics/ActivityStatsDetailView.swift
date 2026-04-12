@@ -104,11 +104,11 @@ struct ActivityStatsDetailView: View {
 
             Divider()
 
-            metricRow(label: "Total Time", value: formatDuration(metrics.totalDuration))
+            metricRow(label: "Total Time", value: metrics.totalDuration.formattedDuration(style: .compactNoSeconds))
             Divider().padding(.leading, 16)
-            metricRow(label: "Daily Average", value: formatDuration(metrics.dailyAverage))
+            metricRow(label: "Daily Average", value: metrics.dailyAverage.formattedDuration(style: .compactNoSeconds))
             Divider().padding(.leading, 16)
-            metricRow(label: "Weekly Average", value: formatDuration(metrics.weeklyAverage))
+            metricRow(label: "Weekly Average", value: metrics.weeklyAverage.formattedDuration(style: .compactNoSeconds))
             Divider().padding(.leading, 16)
             metricRow(
                 label: "Consistency (30d)",
@@ -357,7 +357,7 @@ struct ActivityStatsDetailView: View {
                             .font(.system(.subheadline, design: .rounded))
                             .foregroundStyle(.secondary)
                         Spacer()
-                        Text(formatDuration(entry.totalDuration))
+                        Text(entry.totalDuration.formattedDuration(style: .compactNoSeconds))
                             .font(.system(.subheadline, design: .rounded, weight: .semibold))
                             .monospacedDigit()
                     }
@@ -375,15 +375,6 @@ struct ActivityStatsDetailView: View {
     }
 
     // MARK: - Helpers
-
-    private func formatDuration(_ seconds: TimeInterval) -> String {
-        let h = Int(seconds) / 3600
-        let m = (Int(seconds) % 3600) / 60
-        if h > 0 && m > 0 { return "\(h)h \(m)m" }
-        if h > 0 { return "\(h)h" }
-        if m > 0 { return "\(m)m" }
-        return "—"
-    }
 
     private func formatDateRange(start: Date, end: Date) -> String {
         let formatter = DateFormatter()

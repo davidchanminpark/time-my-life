@@ -150,7 +150,7 @@ struct TimeMyLifeWatch_Watch_AppApp: App {
                         #if DEBUG
                         if let startTime = timer.startTime {
                             let elapsed = Date().timeIntervalSince(startTime)
-                            print("✅ Timer is running - elapsed: \(formatElapsed(elapsed))")
+                            print("✅ Timer is running - elapsed: \(elapsed.formattedDuration(style: .timer))")
                         }
                         #endif
                     }
@@ -162,17 +162,4 @@ struct TimeMyLifeWatch_Watch_AppApp: App {
             }
         }
 
-        #if DEBUG
-        private func formatElapsed(_ duration: TimeInterval) -> String {
-            let hours = Int(duration) / 3600
-            let minutes = (Int(duration) % 3600) / 60
-            let seconds = Int(duration) % 60
-
-            if hours > 0 {
-                return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
-            } else {
-                return String(format: "%02d:%02d", minutes, seconds)
-            }
-        }
-        #endif
 }
