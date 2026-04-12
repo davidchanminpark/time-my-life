@@ -35,26 +35,7 @@ struct ActivityTimerView: View {
 
                 // Avatar + name
                 VStack(spacing: 16) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 26)
-                            .fill(activity.emoji.isEmpty
-                                  ? activity.color()
-                                  : activity.color().opacity(0.18))
-                            .frame(width: 100, height: 100)
-                            .shadow(
-                                color: activity.color().opacity(0.45),
-                                radius: 24,
-                                x: 0, y: 10
-                            )
-                        if activity.emoji.isEmpty {
-                            Text(String(activity.name.prefix(1)).uppercased())
-                                .font(.system(size: 44, weight: .bold, design: .rounded))
-                                .foregroundStyle(Color(white: 0.18))
-                        } else {
-                            Text(activity.emoji)
-                                .font(.system(size: 52))
-                        }
-                    }
+                    ActivityAvatarView(activity: activity, size: 100, shadow: true)
 
                     VStack(spacing: 6) {
                         Text(activity.name)
