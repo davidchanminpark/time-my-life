@@ -53,21 +53,7 @@ struct ActivityRowView: View {
     // MARK: - Sub-views
 
     private var activityAvatar: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 13)
-                .fill(activity.emoji.isEmpty
-                      ? activity.color()
-                      : activity.color().opacity(0.18))
-                .frame(width: 48, height: 48)
-            if activity.emoji.isEmpty {
-                Text(String(activity.name.prefix(1)).uppercased())
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color(white: 0.18))
-            } else {
-                Text(activity.emoji)
-                    .font(.system(size: 26))
-            }
-        }
+        ActivityAvatarView(activity: activity)
     }
 
     private var runningBadge: some View {

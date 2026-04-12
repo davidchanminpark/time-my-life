@@ -127,23 +127,7 @@ struct GoalFormView: View {
             }
         } label: {
             HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(
-                            activity.emoji.isEmpty
-                                ? activity.color()
-                                : activity.color().opacity(0.18)
-                        )
-                        .frame(width: 36, height: 36)
-                    if activity.emoji.isEmpty {
-                        Text(String(activity.name.prefix(1)).uppercased())
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color(white: 0.18))
-                    } else {
-                        Text(activity.emoji)
-                            .font(.system(size: 18))
-                    }
-                }
+                ActivityAvatarView(activity: activity, size: 36)
 
                 Text(activity.name)
                     .font(.system(.subheadline, design: .rounded, weight: .medium))
