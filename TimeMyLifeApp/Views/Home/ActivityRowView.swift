@@ -88,13 +88,7 @@ struct ActivityRowView: View {
     // MARK: - Helpers
 
     private var formattedDuration: String {
-        let total = Int(displayedDuration)
-        let h = total / 3600
-        let m = (total % 3600) / 60
-        let s = total % 60
-        if h > 0 { return m > 0 ? "\(h)h \(m)m" : "\(h)h" }
-        if m > 0 { return s > 0 ? "\(m)m \(s)s" : "\(m)m" }
-        return "\(s)s"
+        displayedDuration.formattedDuration(style: .compact)
     }
 }
 

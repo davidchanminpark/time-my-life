@@ -50,36 +50,6 @@ public final class TimeEntry {
         }
     }
 
-    /// Formats the total duration as HH:MM:SS
-    /// - Returns: Formatted string representation of duration
-    public func formattedDuration() -> String {
-        return formatDuration(totalDuration)
-    }
-
-    /// Formats the total duration as MM:SS (for durations under 1 hour)
-    /// - Returns: Formatted string representation of duration
-    public func formattedDurationShort() -> String {
-        let hours = Int(totalDuration) / 3600
-        if hours > 0 {
-            return formattedDuration()
-        }
-
-        let minutes = Int(totalDuration) / 60 % 60
-        let seconds = Int(totalDuration) % 60
-        return String(format: "%02d:%02d", minutes, seconds)
-    }
-
-    // MARK: - Private Helpers
-
-    /// Formats a TimeInterval as HH:MM:SS
-    /// - Parameter duration: Duration in seconds
-    /// - Returns: Formatted string
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let hours = Int(duration) / 3600
-        let minutes = Int(duration) / 60 % 60
-        let seconds = Int(duration) % 60
-        return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
-    }
 }
 
 // MARK: - Static Helper Methods

@@ -688,7 +688,7 @@ private struct EditTimeEntrySheet: View {
                     Text(formatDate(entry.date))
                         .font(.system(.subheadline, design: .rounded, weight: .medium))
                         .foregroundStyle(.primary)
-                    Text(formatDuration(entry.totalDuration))
+                    Text(entry.totalDuration.formattedDuration(style: .verbose))
                         .font(.system(.caption, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
@@ -765,13 +765,6 @@ private struct EditTimeEntrySheet: View {
         return formatter.string(from: date)
     }
 
-    private func formatDuration(_ seconds: TimeInterval) -> String {
-        let h = Int(seconds) / 3600
-        let m = (Int(seconds) % 3600) / 60
-        if h > 0 && m > 0 { return "\(h) hours \(m) minutes" }
-        if h > 0 { return h == 1 ? "1 hour" : "\(h) hours" }
-        return m == 1 ? "1 minute" : "\(m) minutes"
-    }
 }
 
 // MARK: - Emoji Picker Sheet

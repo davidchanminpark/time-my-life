@@ -76,7 +76,7 @@ struct ActivityTimerView: View {
                 Spacer()
 
                 // Timer display
-                Text(viewModel.displayedElapsedTime.formattedAsHoursMinutes())
+                Text(viewModel.displayedElapsedTime.formattedDuration(style: .timer))
                     .font(.system(size: 64, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(viewModel.isRunning ? Color.appAccent : .primary)
