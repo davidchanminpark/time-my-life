@@ -39,7 +39,7 @@ struct ManageActivitiesView: View {
                         .buttonStyle(.plain)
                     }
                 } header: {
-                    Text("\(viewModel.activities.count) / 30 activities")
+                    Text("\(viewModel.activities.count) / \(AppConstants.maxActivities) activities")
                 }
             }
 

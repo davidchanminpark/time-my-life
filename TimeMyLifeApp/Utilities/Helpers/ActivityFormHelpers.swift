@@ -51,15 +51,15 @@ public enum ActivityFormHelpers {
     public static func validateName(_ name: String) -> String? {
         if name.isEmpty {
             return "Name is required"
-        } else if name.count > 30 {
-            return "Name must not exceed 30 characters"
+        } else if name.count > AppConstants.maxNameLength {
+            return "Name must not exceed \(AppConstants.maxNameLength) characters"
         }
         return nil
     }
 
     public static func validateCategory(_ category: String) -> String? {
-        if category.count > 20 {
-            return "Category must not exceed 20 characters"
+        if category.count > AppConstants.maxCategoryLength {
+            return "Category must not exceed \(AppConstants.maxCategoryLength) characters"
         }
         return nil
     }

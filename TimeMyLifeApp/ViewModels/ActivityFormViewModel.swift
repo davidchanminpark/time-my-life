@@ -124,8 +124,8 @@ public class ActivityFormViewModel {
 
         if trimmedName.isEmpty {
             return "Activity name is required"
-        } else if trimmedName.count > 30 {
-            return "Activity name must be 30 characters or less"
+        } else if trimmedName.count > AppConstants.maxNameLength {
+            return "Activity name must be \(AppConstants.maxNameLength) characters or less"
         }
         return nil
     }
@@ -135,8 +135,8 @@ public class ActivityFormViewModel {
         // Only show error if user has typed something
         guard !category.isEmpty else { return nil }
 
-        if trimmedCategory.count > 20 {
-            return "Category must be 20 characters or less"
+        if trimmedCategory.count > AppConstants.maxCategoryLength {
+            return "Category must be \(AppConstants.maxCategoryLength) characters or less"
         }
         return nil
     }
@@ -146,8 +146,8 @@ public class ActivityFormViewModel {
         if case .create = mode {
             do {
                 let count = try dataService.getActivityCount()
-                if count >= 30 {
-                    return "Maximum 30 activities allowed"
+                if count >= AppConstants.maxActivities {
+                    return "Maximum \(AppConstants.maxActivities) activities allowed"
                 }
             } catch {
                 return "Failed to check activity limit"
@@ -158,12 +158,12 @@ public class ActivityFormViewModel {
 
     /// Characters remaining for name
     public var nameCharactersRemaining: Int {
-        30 - trimmedName.count
+        AppConstants.maxNameLength - trimmedName.count
     }
 
     /// Characters remaining for category
     public var categoryCharactersRemaining: Int {
-        20 - trimmedCategory.count
+        AppConstants.maxCategoryLength - trimmedCategory.count
     }
 
     // MARK: - Public Methods
@@ -301,8 +301,8 @@ public class ActivityFormViewModel {
     /// - Parameter newValue: New name value
     public func updateName(_ newValue: String) {
         let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.count > 30 {
-            name = String(trimmed.prefix(30))
+        if trimmed.count > AppConstants.maxNameLength {
+            name = String(trimmed.prefix(AppConstants.maxNameLength))
         } else {
             name = trimmed
         }
@@ -312,8 +312,8 @@ public class ActivityFormViewModel {
     /// - Parameter newValue: New category value
     public func updateCategory(_ newValue: String) {
         let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.count > 20 {
-            category = String(trimmed.prefix(20))
+        if trimmed.count > AppConstants.maxCategoryLength {
+            category = String(trimmed.prefix(AppConstants.maxCategoryLength))
         } else {
             category = trimmed
         }

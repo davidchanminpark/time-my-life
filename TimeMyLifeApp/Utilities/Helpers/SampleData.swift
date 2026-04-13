@@ -231,7 +231,7 @@ public enum SampleData {
         guard !trimmedName.isEmpty else {
             throw ActivityValidationError.nameTooShort
         }
-        guard trimmedName.count <= 30 else {
+        guard trimmedName.count <= AppConstants.maxNameLength else {
             throw ActivityValidationError.nameTooLong
         }
 

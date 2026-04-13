@@ -507,7 +507,7 @@ private extension ActivityFormView {
                     .padding(.bottom, 10)
 
                 if viewModel.recentEntries.isEmpty {
-                    Text("No entries in the last 7 days")
+                    Text("No entries in the last \(AppConstants.editTimeEntryWindowDays) days")
                         .font(.system(.subheadline, design: .rounded))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)

@@ -175,11 +175,11 @@ public class MainViewModel {
     }
 
     /// Checks if the activity limit has been reached
-    /// - Returns: True if at or above limit (30)
+    /// - Returns: True if at or above limit
     public func isActivityLimitReached() -> Bool {
         do {
             let count = try dataService.getActivityCount()
-            return count >= 30
+            return count >= AppConstants.maxActivities
         } catch {
             #if DEBUG
             print("❌ MainViewModel: Failed to check activity count: \(error)")

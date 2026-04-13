@@ -15,7 +15,7 @@ struct AddTimeEntrySheet: View {
     @State private var errorMessage: String?
 
     private var minDate: Date {
-        Calendar.current.date(byAdding: .day, value: -30, to: Calendar.current.startOfDay(for: Date())) ?? Date()
+        Calendar.current.date(byAdding: .day, value: -AppConstants.addTimeEntryLookbackDays, to: Calendar.current.startOfDay(for: Date())) ?? Date()
     }
 
     private var totalSeconds: TimeInterval {

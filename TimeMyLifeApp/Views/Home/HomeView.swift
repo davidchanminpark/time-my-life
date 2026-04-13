@@ -303,7 +303,7 @@ private struct AlertModifiers: ViewModifier {
             .alert("Activity Limit Reached", isPresented: $showActivityLimitAlert) {
                 Button("OK") { }
             } message: {
-                Text("You've reached the maximum of 30 activities. Delete an activity from Settings to add a new one.")
+                Text("You've reached the maximum of \(AppConstants.maxActivities) activities. Delete an activity from Settings to add a new one.")
             }
             .alert("Still finishing up?", isPresented: $showMidnightPrompt) {
                 Button("Yes") {

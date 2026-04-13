@@ -110,8 +110,8 @@ class ActivityStatsViewModel {
             let weeksElapsed = max(1.0, Double(daysElapsed) / 7.0)
             let weeklyAvg = totalDuration / weeksElapsed
 
-            // 30-day window for consistency and goal success rate, clamped to yearStart
-            let thirtyDaysAgo = max(yearStart, cal.date(byAdding: .day, value: -29, to: today)!)
+            // Rolling window for consistency and goal success rate, clamped to yearStart
+            let thirtyDaysAgo = max(yearStart, cal.date(byAdding: .day, value: -(AppConstants.activityStatsWindowDays - 1), to: today)!)
             let entries30d = yearEntries.filter { $0.date >= thirtyDaysAgo }
             let recentNonZero = entries30d.filter { $0.totalDuration > 0 }
             let trackedDays30d = recentNonZero.count

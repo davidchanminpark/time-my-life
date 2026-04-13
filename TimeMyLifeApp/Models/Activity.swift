@@ -21,11 +21,11 @@ public enum ActivityValidationError: Error, LocalizedError {
         case .nameTooShort:
             return "Activity name must be at least 1 character"
         case .nameTooLong:
-            return "Activity name must not exceed 30 characters"
+            return "Activity name must not exceed \(AppConstants.maxNameLength) characters"
         case .invalidHexColor:
             return "Invalid hex color format. Must be 6 hex characters (e.g., FF5733 or #FF5733)"
         case .categoryTooLong:
-            return "Category must not exceed 20 characters"
+            return "Category must not exceed \(AppConstants.maxCategoryLength) characters"
         case .noScheduledDays:
             return "At least one day must be scheduled"
         case .invalidWeekday(let day):
@@ -109,7 +109,7 @@ public final class Activity {
         guard !trimmedName.isEmpty else {
             throw ActivityValidationError.nameTooShort
         }
-        guard trimmedName.count <= 30 else {
+        guard trimmedName.count <= AppConstants.maxNameLength else {
             throw ActivityValidationError.nameTooLong
         }
 
@@ -118,7 +118,7 @@ public final class Activity {
 
         // Validate category length
         let trimmedCategory = category.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmedCategory.count <= 20 else {
+        guard trimmedCategory.count <= AppConstants.maxCategoryLength else {
             throw ActivityValidationError.categoryTooLong
         }
 

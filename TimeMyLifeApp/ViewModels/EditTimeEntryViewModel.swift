@@ -66,7 +66,7 @@ final class EditTimeEntryViewModel {
     func loadRecentEntries() {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
-        guard let startDate = cal.date(byAdding: .day, value: -6, to: today) else {
+        guard let startDate = cal.date(byAdding: .day, value: -(AppConstants.editTimeEntryWindowDays - 1), to: today) else {
             recentEntries = []
             return
         }
@@ -80,7 +80,7 @@ final class EditTimeEntryViewModel {
             recentEntries = all
                 .filter { $0.totalDuration > 0 }
                 .sorted { $0.date > $1.date }
-                .prefix(5)
+                .prefix(AppConstants.editTimeEntryMaxRows)
                 .map { $0 }
         } catch {
             recentEntries = []
