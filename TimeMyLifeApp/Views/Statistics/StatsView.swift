@@ -118,30 +118,7 @@ struct StatsView: View {
                 .frame(width: 140, height: 140)
                 .chartLegend(.hidden)
 
-                // Legend
-                VStack(alignment: .leading, spacing: 7) {
-                    ForEach(viewModel.activityStats.prefix(7)) { stat in
-                        HStack(spacing: 7) {
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(stat.color)
-                                .frame(width: 11, height: 11)
-                            Text(stat.activity.name)
-                                .font(.system(.caption, design: .rounded))
-                                .lineLimit(1)
-                            Spacer(minLength: 4)
-                            Text(String(format: "%.0f%%", stat.percentage * 100))
-                                .font(.system(.caption, design: .rounded))
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                        }
-                    }
-                    if viewModel.activityStats.count > 7 {
-                        Text("+\(viewModel.activityStats.count - 7) more")
-                            .font(.system(.caption2, design: .rounded))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                ChartLegendView(stats: viewModel.activityStats)
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 16)
