@@ -24,9 +24,6 @@ public class TimerViewModel {
     /// Whether the timer is currently running for this activity/date
     public var isRunning: Bool = false
 
-    /// Error state
-    public var error: Error?
-
     /// Alert message
     public var alertMessage: String?
 
@@ -72,7 +69,6 @@ public class TimerViewModel {
             let entries = try dataService.fetchTimeEntries(for: activity.id, on: targetDate)
             accumulatedTime = entries.first?.totalDuration ?? 0
         } catch {
-            self.error = error
             #if DEBUG
             print("❌ TimerViewModel: Failed to load accumulated time: \(error)")
             #endif
@@ -91,7 +87,6 @@ public class TimerViewModel {
             print("✅ TimerViewModel: Started timer for '\(activity.name)'")
             #endif
         } catch {
-            self.error = error
             alertMessage = "Failed to start timer: \(error.localizedDescription)"
             #if DEBUG
             print("❌ TimerViewModel: Failed to start timer: \(error)")
@@ -127,7 +122,6 @@ public class TimerViewModel {
             // Reload accumulated time
             await loadAccumulatedTime()
         } catch {
-            self.error = error
             alertMessage = "Failed to stop timer: \(error.localizedDescription)"
             #if DEBUG
             print("❌ TimerViewModel: Failed to stop timer: \(error)")

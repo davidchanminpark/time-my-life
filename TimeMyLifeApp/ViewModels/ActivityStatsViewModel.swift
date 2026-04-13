@@ -41,6 +41,7 @@ class ActivityStatsViewModel {
     var periodBarUsesWeeks = false
     var recentEntries: [TimeEntry] = []
     var isLoading = false
+    var alertMessage: String?
 
     /// Peak hours in a single day over the 30-day trend (for chart Y axis).
     var trendChartMaxHours: Double {
@@ -311,7 +312,10 @@ class ActivityStatsViewModel {
                 .map { $0 }
 
         } catch {
-            print("ActivityStatsViewModel error: \(error)")
+            alertMessage = "Failed to load stats"
+            #if DEBUG
+            print("❌ ActivityStatsViewModel: \(error)")
+            #endif
         }
     }
 

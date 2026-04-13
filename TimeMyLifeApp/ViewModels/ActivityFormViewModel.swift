@@ -53,9 +53,6 @@ public class ActivityFormViewModel {
     /// Whether the form is currently saving
     public var isSaving = false
 
-    /// Error state
-    public var error: Error?
-
     /// Whether to show delete confirmation
     public var showDeleteConfirmation = false
 
@@ -257,11 +254,9 @@ public class ActivityFormViewModel {
         } catch let error as ActivityValidationError {
             // Convert model validation errors to UI error messages
             validationError = error.localizedDescription
-            self.error = error
             throw error
         } catch {
             validationError = "Failed to save activity"
-            self.error = error
             #if DEBUG
             print("❌ ActivityFormViewModel: Failed to save: \(error)")
             #endif
@@ -289,7 +284,6 @@ public class ActivityFormViewModel {
 
             return true
         } catch {
-            self.error = error
             #if DEBUG
             print("❌ ActivityFormViewModel: Failed to delete: \(error)")
             #endif

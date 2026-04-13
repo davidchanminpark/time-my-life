@@ -20,9 +20,6 @@ public class SettingsViewModel {
     /// Whether activities are currently loading
     public var isLoading = false
 
-    /// Error state
-    public var error: Error?
-
     /// Alert message for errors
     public var alertMessage: String?
     
@@ -50,7 +47,6 @@ public class SettingsViewModel {
             print("✅ SettingsViewModel: Loaded \(activities.count) activities")
             #endif
         } catch {
-            self.error = error
             self.alertMessage = "Failed to load activities"
             #if DEBUG
             print("❌ SettingsViewModel: Failed to load activities: \(error)")
@@ -71,7 +67,6 @@ public class SettingsViewModel {
             // Reload activities to update the list
             await loadActivities()
         } catch {
-            self.error = error
             self.alertMessage = "Failed to delete activity"
             #if DEBUG
             print("❌ SettingsViewModel: Failed to delete activity: \(error)")

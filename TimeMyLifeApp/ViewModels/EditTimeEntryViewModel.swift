@@ -34,7 +34,7 @@ final class EditTimeEntryViewModel {
 
     var isSaving = false
     var isDeleting = false
-    var errorMessage: String?
+    var alertMessage: String?
 
     // MARK: - Computed
 
@@ -84,7 +84,7 @@ final class EditTimeEntryViewModel {
                 .map { $0 }
         } catch {
             recentEntries = []
-            errorMessage = "Failed to load recent entries"
+            alertMessage = "Failed to load recent entries"
         }
     }
 
@@ -95,7 +95,7 @@ final class EditTimeEntryViewModel {
     @discardableResult
     func save() async -> Bool {
         guard let entry = selectedEntry else {
-            errorMessage = "Select a time entry first"
+            alertMessage = "Select a time entry first"
             return false
         }
         isSaving = true
@@ -109,7 +109,7 @@ final class EditTimeEntryViewModel {
             )
             return true
         } catch {
-            errorMessage = "Failed to save: \(error.localizedDescription)"
+            alertMessage = "Failed to save: \(error.localizedDescription)"
             return false
         }
     }
@@ -121,7 +121,7 @@ final class EditTimeEntryViewModel {
     @discardableResult
     func deleteSelectedEntry() async -> Bool {
         guard let entry = selectedEntry else {
-            errorMessage = "Select a time entry first"
+            alertMessage = "Select a time entry first"
             return false
         }
         isDeleting = true
@@ -133,7 +133,7 @@ final class EditTimeEntryViewModel {
             loadRecentEntries()
             return true
         } catch {
-            errorMessage = "Failed to delete: \(error.localizedDescription)"
+            alertMessage = "Failed to delete: \(error.localizedDescription)"
             return false
         }
     }

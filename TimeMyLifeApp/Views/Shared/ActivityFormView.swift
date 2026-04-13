@@ -430,7 +430,7 @@ private extension ActivityFormView {
                             if viewModel.selectedEntry != nil {
                                 durationCard
                             }
-                            if let error = viewModel.errorMessage {
+                            if let error = viewModel.alertMessage {
                                 Text(error)
                                     .font(.system(.caption, design: .rounded))
                                     .foregroundStyle(.red)

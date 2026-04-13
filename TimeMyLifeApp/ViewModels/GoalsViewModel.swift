@@ -38,7 +38,7 @@ class GoalsViewModel {
     var dailyGoalsWithProgress: [GoalWithProgress] = []
     var weeklyGoalsWithProgress: [GoalWithProgress] = []
     var isLoading = false
-    var error: Error?
+    var alertMessage: String?
 
     // MARK: - Dependencies
 
@@ -61,7 +61,10 @@ class GoalsViewModel {
             dailyGoalsWithProgress = try daily.compactMap { try buildGoalWithProgress($0) }
             weeklyGoalsWithProgress = try weekly.compactMap { try buildGoalWithProgress($0) }
         } catch {
-            self.error = error
+            alertMessage = "Failed to load goals"
+            #if DEBUG
+            print("❌ GoalsViewModel: Failed to load goals: \(error)")
+            #endif
         }
     }
 

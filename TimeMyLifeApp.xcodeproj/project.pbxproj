@@ -117,6 +117,7 @@
 				Services/TimerService.swift,
 				Services/WatchConnectivitySyncService.swift,
 				"Utilities/Extensions/TimeInterval+Formatting.swift",
+				Utilities/Constants.swift,
 				Utilities/Helpers/ActivityFormHelpers.swift,
 				Utilities/Helpers/SampleData.swift,
 				Utilities/IOSViewPreviewSupport.swift,

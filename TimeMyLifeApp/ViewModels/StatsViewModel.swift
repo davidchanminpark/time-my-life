@@ -57,6 +57,7 @@ class StatsViewModel {
     var totalHours: Double = 0
     var trackedDays: Int = 0
     var isLoading = false
+    var alertMessage: String?
 
     /// Daily chart only: use minute labels on the Y axis when the tallest day is under 2 hours.
     var useMinuteAxisForDailyBarChart: Bool {
@@ -128,7 +129,10 @@ class StatsViewModel {
             }
 
         } catch {
-            print("StatsViewModel error: \(error)")
+            alertMessage = "Failed to load stats"
+            #if DEBUG
+            print("❌ StatsViewModel: \(error)")
+            #endif
         }
     }
 

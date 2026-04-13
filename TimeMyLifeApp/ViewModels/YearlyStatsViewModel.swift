@@ -45,6 +45,7 @@ class YearlyStatsViewModel {
     var weekdayBarSegments: [WeekdayBarSegment] = []
     var maxWeekdayBarHours: Double = 0
     var isLoading = false
+    var alertMessage: String?
 
     var weekdayBarYAxisTickHours: [Double] {
         StatsChartYAxis.yTickHours(
@@ -94,7 +95,10 @@ class YearlyStatsViewModel {
             }
             selectedYear = yearToLoad
         } catch {
-            print("YearlyStatsViewModel error: \(error)")
+            alertMessage = "Failed to load yearly stats"
+            #if DEBUG
+            print("❌ YearlyStatsViewModel: \(error)")
+            #endif
             return
         }
 
@@ -139,7 +143,10 @@ class YearlyStatsViewModel {
             buildWeekdayBreakdown(entries: entries, yearStart: yearStart, yearEnd: yearEnd, activityMap: activityMap)
 
         } catch {
-            print("YearlyStatsViewModel error: \(error)")
+            alertMessage = "Failed to load yearly stats"
+            #if DEBUG
+            print("❌ YearlyStatsViewModel: \(error)")
+            #endif
         }
     }
 

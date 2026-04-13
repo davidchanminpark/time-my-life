@@ -33,9 +33,6 @@ public class MainViewModel {
     /// Loading state
     public var isLoading = false
 
-    /// Error state
-    public var error: Error?
-
     /// Refresh trigger - increment this to force view updates
     public var refreshTrigger: Int = 0
 
@@ -106,7 +103,6 @@ public class MainViewModel {
             print("🔄 MainViewModel: Loaded \(fetchedActivities.count) activities for weekday \(weekday)")
             #endif
         } catch {
-            self.error = error
             #if DEBUG
             print("❌ MainViewModel: Failed to load activities: \(error)")
             #endif

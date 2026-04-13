@@ -32,6 +32,7 @@ class CalendarViewModel {
     var dayDataMap: [Date: DayData] = [:]
     var selectedDate: Date? = nil
     var isLoading = false
+    var alertMessage: String?
 
     var selectedDayData: DayData? {
         guard let date = selectedDate else { return nil }
@@ -127,7 +128,10 @@ class CalendarViewModel {
             }
 
         } catch {
-            print("CalendarViewModel error: \(error)")
+            alertMessage = "Failed to load calendar"
+            #if DEBUG
+            print("❌ CalendarViewModel: \(error)")
+            #endif
         }
     }
 
