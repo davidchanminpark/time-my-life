@@ -103,6 +103,8 @@ struct AddTimeEntrySheet: View {
                     .padding(.bottom, 32)
                 }
             }
+            .foregroundStyle(Color.appPrimaryText)
+            .fontDesign(.rounded)
             .navigationTitle("Add Time Entry")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

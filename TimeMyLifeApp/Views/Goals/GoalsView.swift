@@ -31,6 +31,15 @@ struct GoalsView: View {
                 Color.appBackground.ignoresSafeArea()
 
                 VStack(spacing: 0) {
+                    HStack {
+                        Text("Goals")
+                            .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                            .foregroundStyle(Color.appPrimaryText)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 8)
+
                     frequencyToggle
                         .padding(.horizontal, 24)
                         .padding(.top, 12)
@@ -46,7 +55,7 @@ struct GoalsView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
-            .navigationTitle("Goals")
+            .foregroundStyle(Color.appPrimaryText)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -65,6 +74,7 @@ struct GoalsView: View {
                     dataService: dataService,
                     onSave: { Task { await viewModel.loadGoals() } }
                 )
+                .fontDesign(.rounded)
             }
             .sheet(item: $editingGoal) { goal in
                 GoalFormView(
@@ -72,6 +82,7 @@ struct GoalsView: View {
                     dataService: dataService,
                     onSave: { Task { await viewModel.loadGoals() } }
                 )
+                .fontDesign(.rounded)
             }
             .onAppear {
                 Task { await viewModel.loadGoals() }
@@ -163,7 +174,7 @@ struct GoalsView: View {
                 Text("Add Goal")
                     .font(.system(.subheadline, design: .rounded, weight: .medium))
             }
-            .foregroundStyle(Color.appAccent)
+            .foregroundStyle(Color.appPrimaryText)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
             .background(Color.appCardBackground)

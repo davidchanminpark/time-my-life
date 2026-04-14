@@ -35,6 +35,7 @@ struct CalendarView: View {
                 .padding(.bottom, 24)
             }
         }
+        .foregroundStyle(Color.appPrimaryText)
         .navigationTitle("Calendar")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingDayDetail) {
@@ -130,7 +131,7 @@ struct CalendarView: View {
                 .foregroundStyle(
                     isFuture ? Color.secondary.opacity(0.4)
                     : isToday ? Color.appAccent
-                    : Color.primary
+                    : Color.appPrimaryText
                 )
                 .frame(width: 30, height: 30)
                 .background {
@@ -240,6 +241,8 @@ struct DayDetailView: View {
                     .padding(.bottom, 32)
                 }
             }
+            .foregroundStyle(Color.appPrimaryText)
+            .fontDesign(.rounded)
             .navigationTitle(dayData.date.formatted(.dateTime.month().day().year()))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

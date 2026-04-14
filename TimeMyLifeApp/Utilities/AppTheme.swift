@@ -38,22 +38,38 @@ enum AppearancePreference: String, CaseIterable, Identifiable {
 // MARK: - Theme Colors
 
 extension Color {
-    /// Warm cream in light mode, dark background in dark mode
+    /// Soft lavender in light mode, dark background in dark mode
     static let appBackground = Color(UIColor { traits in
         traits.userInterfaceStyle == .dark
             ? UIColor(red: 0.11, green: 0.11, blue: 0.12, alpha: 1)
-            : UIColor(red: 0.980, green: 0.973, blue: 0.961, alpha: 1)
+            : UIColor(red: 0.867, green: 0.816, blue: 0.902, alpha: 1) // #DDD0E6
     })
     /// Lavender-purple for active states, primary buttons #8B7FE8
     static let appAccent = Color(red: 0.545, green: 0.498, blue: 0.910)
     /// Soft lavender for selected tab chip #D4BAFF
     static let appTabSelected = Color(red: 0.831, green: 0.729, blue: 1.000)
-    /// Adaptive card surface: white in light, light grey in dark mode
+    /// Deep purple-grey text in light mode, white in dark mode #3D2E4F
+    static let appPrimaryText = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1)
+            : UIColor(red: 0.239, green: 0.180, blue: 0.310, alpha: 1) // #3D2E4F
+    })
+    /// Adaptive card surface: light cream in light, light grey in dark mode #FFF8F0
     static let appCardBackground = Color(UIColor { traits in
         traits.userInterfaceStyle == .dark
             ? UIColor(red: 0.22, green: 0.22, blue: 0.24, alpha: 1)
-            : UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1)
+            : UIColor(red: 1.0, green: 0.973, blue: 0.941, alpha: 1) // #FFF8F0
     })
+}
+
+// MARK: - UIFont Helpers
+
+extension UIFont {
+    /// Returns a version of the font using the rounded design variant.
+    func rounded() -> UIFont {
+        guard let descriptor = fontDescriptor.withDesign(.rounded) else { return self }
+        return UIFont(descriptor: descriptor, size: pointSize)
+    }
 }
 
 // MARK: - Reusable Modifiers

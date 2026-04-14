@@ -54,6 +54,8 @@ struct GoalFormView: View {
                     .padding(.bottom, 32)
                 }
             }
+            .foregroundStyle(Color.appPrimaryText)
+            .fontDesign(.rounded)
             .navigationTitle(isCreating ? "New Goal" : "Edit Goal")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -131,7 +133,7 @@ struct GoalFormView: View {
 
                 Text(activity.name)
                     .font(.system(.subheadline, design: .rounded, weight: .medium))
-                    .foregroundStyle(Color.primary)
+                    .foregroundStyle(Color.appPrimaryText)
                     .lineLimit(1)
 
                 Spacer()

@@ -41,12 +41,15 @@ struct ManageActivitiesView: View {
                 } header: {
                     Text("\(viewModel.activities.count) / \(AppConstants.maxActivities) activities")
                 }
+                .listRowBackground(Color.appCardBackground)
             }
 
             Section {} footer: {
                 Color.clear.frame(height: 90)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Color.appBackground)
         .navigationTitle("Manage Activities")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $editingActivity, onDismiss: {
@@ -55,6 +58,7 @@ struct ManageActivitiesView: View {
             NavigationStack {
                 ActivityFormView(mode: .edit(activity), dataService: dataService)
             }
+            .fontDesign(.rounded)
         }
         .alert("Error", isPresented: $showDeleteError) {
             Button("OK") {}

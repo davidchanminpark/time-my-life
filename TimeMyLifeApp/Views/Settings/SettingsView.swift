@@ -60,8 +60,19 @@ struct SettingsView: View {
             .background(Color.appBackground)
             .tint(Color.appAccent)
             .contentMargins(.bottom, 110, for: .scrollContent)
-            .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top) {
+                HStack {
+                    Text("Settings")
+                        .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                        .foregroundStyle(Color.appPrimaryText)
+                    Spacer()
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 40)
+                .padding(.bottom, 4)
+                .background(Color.appBackground)
+            }
             .onReceive(NotificationCenter.default.publisher(for: .timeEntryDidSync)) { _ in
                 lastSyncTimestamp = Date().timeIntervalSince1970
             }
@@ -133,6 +144,7 @@ struct SettingsView: View {
                 }
             }
         }
+        .listRowBackground(Color.appCardBackground)
     }
 
     // MARK: - Notifications Section
@@ -213,6 +225,7 @@ struct SettingsView: View {
         } header: {
             Text("Notifications")
         }
+        .listRowBackground(Color.appCardBackground)
     }
 
     private var selectedHoursSet: Set<Int> {
@@ -253,6 +266,7 @@ struct SettingsView: View {
                 }
             }
         }
+        .listRowBackground(Color.appCardBackground)
     }
 
     // MARK: - Sync Section
@@ -311,6 +325,7 @@ struct SettingsView: View {
                     .foregroundStyle(.red)
             }
         }
+        .listRowBackground(Color.appCardBackground)
     }
 
     // MARK: - Debug Section
@@ -347,6 +362,7 @@ struct SettingsView: View {
             }
             .disabled(isSeeding)
         }
+        .listRowBackground(Color.appCardBackground)
     }
     #endif
 

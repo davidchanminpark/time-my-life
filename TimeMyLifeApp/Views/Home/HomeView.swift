@@ -143,7 +143,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text("\(greetingEmoji) \(greetingText)")
                     .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color.appPrimaryText)
                 Text(formattedDate)
                     .font(.system(.subheadline, design: .rounded))
                     .foregroundStyle(.secondary)

@@ -46,6 +46,7 @@ struct ActivityStatsDetailView: View {
                 .padding(.bottom, 110)
             }
         }
+        .foregroundStyle(Color.appPrimaryText)
         .navigationTitle(activity.name)
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.loadStats() }
@@ -184,7 +185,7 @@ struct ActivityStatsDetailView: View {
         .padding(.vertical, 11)
     }
 
-    private func metricRow(label: String, value: String, valueColor: Color = .primary) -> some View {
+    private func metricRow(label: String, value: String, valueColor: Color = Color.appPrimaryText) -> some View {
         HStack {
             Text(label)
                 .font(.system(.subheadline, design: .rounded))

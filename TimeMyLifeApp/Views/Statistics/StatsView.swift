@@ -28,7 +28,7 @@ struct StatsView: View {
                     mainContent
                 }
             }
-            .navigationTitle("Statistics")
+            .foregroundStyle(Color.appPrimaryText)
             .task { await viewModel.loadStats() }
         }
     }
@@ -38,6 +38,16 @@ struct StatsView: View {
     private var mainContent: some View {
         ScrollView {
             VStack(spacing: 0) {
+                HStack {
+                    Text("Statistics")
+                        .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                        .foregroundStyle(Color.appPrimaryText)
+                    Spacer()
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 40)
+                .padding(.bottom, 10)
+
                 periodPicker
                     .padding(.horizontal)
                     .padding(.vertical, 12)
@@ -68,6 +78,13 @@ struct StatsView: View {
             }
         }
         .pickerStyle(.segmented)
+        .onAppear {
+            UISegmentedControl.appearance().selectedSegmentTintColor = UIColor { traits in
+                traits.userInterfaceStyle == .dark
+                    ? .tertiarySystemFill
+                    : UIColor(red: 1.0, green: 0.973, blue: 0.941, alpha: 1)
+            }
+        }
     }
 
     // MARK: - Summary Card

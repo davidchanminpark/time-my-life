@@ -21,6 +21,19 @@ struct ContentView: View {
         self.syncService = syncService
         // Hide the system tab bar globally so our custom one takes over
         UITabBar.appearance().isHidden = true
+
+        // Use SF Pro Rounded for all navigation bar titles
+        let roundedInline = UIFont.systemFont(ofSize: 20, weight: .semibold)
+            .rounded()
+        let roundedLarge = UIFont.systemFont(ofSize: 34, weight: .bold)
+            .rounded()
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithTransparentBackground()
+        appearance.titleTextAttributes = [.font: roundedInline]
+        appearance.largeTitleTextAttributes = [.font: roundedLarge]
+        UINavigationBar.appearance().standardAppearance = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = appearance
+        UINavigationBar.appearance().compactAppearance = appearance
     }
 
     var body: some View {
@@ -45,6 +58,8 @@ struct ContentView: View {
 
             FloatingTabBar(selectedTab: $selectedTab)
         }
+        .foregroundStyle(Color.appPrimaryText)
+        .fontDesign(.rounded)
         .ignoresSafeArea(.keyboard)
     }
 }

@@ -77,6 +77,8 @@ struct ActivityFormView: View {
                 .padding(.bottom, 32)
             }
         }
+        .foregroundStyle(Color.appPrimaryText)
+        .fontDesign(.rounded)
         .navigationTitle(mode.title)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -153,7 +155,7 @@ struct ActivityFormView: View {
                 .foregroundStyle(Color.appAccent)
             Text(message)
                 .font(.system(.title3, design: .rounded, weight: .semibold))
-                .foregroundStyle(.primary)
+                .foregroundStyle(Color.appPrimaryText)
         }
         .padding(.horizontal, 32)
         .padding(.vertical, 24)
@@ -189,7 +191,7 @@ struct ActivityFormView: View {
         } label: {
             Label("Add Time Entry", systemImage: "plus.circle")
                 .font(.system(.body, design: .rounded, weight: .semibold))
-                .foregroundStyle(Color.appAccent)
+                .foregroundStyle(Color.appPrimaryText)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
         }
@@ -203,7 +205,7 @@ struct ActivityFormView: View {
         } label: {
             Label("Edit Time Entry", systemImage: "pencil.circle")
                 .font(.system(.body, design: .rounded, weight: .semibold))
-                .foregroundStyle(Color.appAccent)
+                .foregroundStyle(Color.appPrimaryText)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
         }
@@ -443,6 +445,8 @@ private extension ActivityFormView {
                         .padding(.bottom, 32)
                     }
                 }
+                .foregroundStyle(Color.appPrimaryText)
+                .fontDesign(.rounded)
                 .navigationTitle("Edit Time Entry")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -539,7 +543,7 @@ private extension ActivityFormView {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(formatDate(entry.date))
                             .font(.system(.subheadline, design: .rounded, weight: .medium))
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(Color.appPrimaryText)
                         Text(entry.totalDuration.formattedDuration(style: .verbose))
                             .font(.system(.caption, design: .rounded))
                             .foregroundStyle(.secondary)

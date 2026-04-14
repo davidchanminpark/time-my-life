@@ -61,6 +61,8 @@ struct EmojiPickerSheet: View {
                 .padding(.vertical, 16)
             }
             .background(Color.appBackground.ignoresSafeArea())
+            .foregroundStyle(Color.appPrimaryText)
+            .fontDesign(.rounded)
             .navigationTitle("Choose Emoji")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
