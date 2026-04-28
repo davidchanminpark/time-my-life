@@ -75,11 +75,11 @@ public class DataService {
             }
             descriptor = FetchDescriptor<Activity>(
                 predicate: predicate,
-                sortBy: [SortDescriptor(\.name)]
+                sortBy: [SortDescriptor(\.sortOrder), SortDescriptor(\.name)]
             )
         } else {
             descriptor = FetchDescriptor<Activity>(
-                sortBy: [SortDescriptor(\.name)]
+                sortBy: [SortDescriptor(\.sortOrder), SortDescriptor(\.name)]
             )
         }
         
@@ -106,6 +106,16 @@ public class DataService {
         return try modelContext.fetchCount(descriptor)
     }
     
+    /// Reorders activities by updating their sortOrder values
+    /// - Parameter activities: Activities in their new order
+    /// - Throws: Error if save fails
+    public func reorderActivities(_ activities: [Activity]) throws {
+        for (index, activity) in activities.enumerated() {
+            activity.sortOrder = index
+        }
+        try modelContext.save()
+    }
+
     /// Creates a new activity
     /// - Parameter activity: Activity to create
     /// - Throws: Error if save fails

@@ -61,6 +61,9 @@ public final class Activity {
     /// Timestamp when the activity was created
     public var createdAt: Date
 
+    /// Sort order for user-defined ordering (lower = higher in list)
+    public var sortOrder: Int
+
     // MARK: - Initialization
 
     /// Standard initializer (required for SwiftData @Model macro)
@@ -72,7 +75,8 @@ public final class Activity {
         category: String,
         emoji: String = "",
         scheduledDays: [Int],
-        createdAt: Date = Date()
+        createdAt: Date = Date(),
+        sortOrder: Int = Int.max
     ) {
         self.id = id
         self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -80,6 +84,7 @@ public final class Activity {
         self.category = category.trimmingCharacters(in: .whitespacesAndNewlines)
         self.emoji = emoji
         self.createdAt = createdAt
+        self.sortOrder = sortOrder
         
         // Convert [Int] to [ScheduledDay] for SwiftData relationship
         // Must set scheduledDays first, then update activity references
@@ -233,6 +238,7 @@ extension Activity: Codable {
         case emoji
         case scheduledDays
         case createdAt
+        case sortOrder
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -245,6 +251,7 @@ extension Activity: Codable {
         // Encode scheduledDays as array of integers for syncing
         try container.encode(scheduledDayInts, forKey: .scheduledDays)
         try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(sortOrder, forKey: .sortOrder)
     }
 
     public convenience init(from decoder: Decoder) throws {
@@ -256,6 +263,7 @@ extension Activity: Codable {
         let emoji = (try? container.decodeIfPresent(String.self, forKey: .emoji)) ?? ""
         let scheduledDays = try container.decode([Int].self, forKey: .scheduledDays)
         let createdAt = try container.decode(Date.self, forKey: .createdAt)
+        let sortOrder = try container.decodeIfPresent(Int.self, forKey: .sortOrder) ?? Int.max
 
         self.init(
             id: id,
@@ -264,7 +272,8 @@ extension Activity: Codable {
             category: category,
             emoji: emoji ?? "",
             scheduledDays: scheduledDays,
-            createdAt: createdAt
+            createdAt: createdAt,
+            sortOrder: sortOrder
         )
 
     }

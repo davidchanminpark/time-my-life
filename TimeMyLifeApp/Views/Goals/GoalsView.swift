@@ -5,6 +5,7 @@
 
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct GoalsView: View {
     let dataService: DataService
@@ -13,6 +14,7 @@ struct GoalsView: View {
     @State private var selectedFrequency: GoalFrequency = .daily
     @State private var showingAddGoal = false
     @State private var editingGoal: Goal? = nil
+    @State private var draggingGoalID: UUID?
 
     init(dataService: DataService) {
         self.dataService = dataService
@@ -23,6 +25,12 @@ struct GoalsView: View {
         selectedFrequency == .daily
             ? viewModel.dailyGoalsWithProgress
             : viewModel.weeklyGoalsWithProgress
+    }
+
+    private var currentGoalsBinding: Binding<[GoalsViewModel.GoalWithProgress]> {
+        selectedFrequency == .daily
+            ? $viewModel.dailyGoalsWithProgress
+            : $viewModel.weeklyGoalsWithProgress
     }
 
     var body: some View {
@@ -129,6 +137,16 @@ struct GoalsView: View {
                         onTap: { editingGoal = goalWithProgress.goal }
                     )
                     .padding(.horizontal, 20)
+                    .onDrag {
+                        draggingGoalID = goalWithProgress.goal.id
+                        return NSItemProvider(object: goalWithProgress.goal.id.uuidString as NSString)
+                    }
+                    .onDrop(of: [.text], delegate: GoalDropDelegate(
+                        goalWithProgress: goalWithProgress,
+                        goalsBinding: currentGoalsBinding,
+                        draggingID: $draggingGoalID,
+                        onReorder: { saveGoalOrder() }
+                    ))
                 }
 
                 addGoalButton
@@ -137,6 +155,14 @@ struct GoalsView: View {
             }
             .padding(.top, 12)
             .padding(.bottom, 110)
+        }
+    }
+
+    private func saveGoalOrder() {
+        if selectedFrequency == .daily {
+            viewModel.saveDailyGoalOrder()
+        } else {
+            viewModel.saveWeeklyGoalOrder()
         }
     }
 
@@ -184,6 +210,40 @@ struct GoalsView: View {
         .buttonStyle(.plain)
     }
 
+}
+
+// MARK: - Goal Drop Delegate
+
+private struct GoalDropDelegate: DropDelegate {
+    let goalWithProgress: GoalsViewModel.GoalWithProgress
+    let goalsBinding: Binding<[GoalsViewModel.GoalWithProgress]>
+    @Binding var draggingID: UUID?
+    let onReorder: () -> Void
+
+    func dropEntered(info: DropInfo) {
+        guard let draggingID,
+              draggingID != goalWithProgress.goal.id,
+              let fromIndex = goalsBinding.wrappedValue.firstIndex(where: { $0.goal.id == draggingID }),
+              let toIndex = goalsBinding.wrappedValue.firstIndex(where: { $0.goal.id == goalWithProgress.goal.id }) else { return }
+
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            goalsBinding.wrappedValue.move(fromOffsets: IndexSet(integer: fromIndex), toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex)
+        }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggingID = nil
+        onReorder()
+        return true
+    }
+
+    func dropExited(info: DropInfo) {
+        // No action needed
+    }
 }
 
 #Preview {

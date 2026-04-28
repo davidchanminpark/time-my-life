@@ -85,6 +85,28 @@ class GoalsViewModel {
         try dataService.deleteGoal(goal)
     }
 
+    func moveDailyGoals(from source: IndexSet, to destination: Int) {
+        dailyGoalsWithProgress.move(fromOffsets: source, toOffset: destination)
+        let goals = dailyGoalsWithProgress.map(\.goal)
+        try? dataService.reorderGoals(goals)
+    }
+
+    func moveWeeklyGoals(from source: IndexSet, to destination: Int) {
+        weeklyGoalsWithProgress.move(fromOffsets: source, toOffset: destination)
+        let goals = weeklyGoalsWithProgress.map(\.goal)
+        try? dataService.reorderGoals(goals)
+    }
+
+    func saveDailyGoalOrder() {
+        let goals = dailyGoalsWithProgress.map(\.goal)
+        try? dataService.reorderGoals(goals)
+    }
+
+    func saveWeeklyGoalOrder() {
+        let goals = weeklyGoalsWithProgress.map(\.goal)
+        try? dataService.reorderGoals(goals)
+    }
+
     // MARK: - Progress Calculation
 
     private func buildGoalWithProgress(_ goal: Goal) throws -> GoalWithProgress? {

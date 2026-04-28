@@ -14,7 +14,7 @@ extension DataService {
     // MARK: - Goal CRUD
 
     public func fetchGoals(frequency: GoalFrequency? = nil, activeOnly: Bool = true) throws -> [Goal] {
-        var descriptor = FetchDescriptor<Goal>(sortBy: [SortDescriptor(\.createdDate)])
+        var descriptor = FetchDescriptor<Goal>(sortBy: [SortDescriptor(\.sortOrder), SortDescriptor(\.createdDate)])
         // SwiftData cannot filter on enum properties via #Predicate at runtime (computed rawValue access crashes).
         // Fetch with isActive predicate only (a plain Bool), then filter frequency in-memory.
         if activeOnly {
@@ -44,6 +44,16 @@ extension DataService {
         descriptor.fetchLimit = 1
         let results = try modelContext.fetch(descriptor)
         return results.contains { $0.frequency == frequency }
+    }
+
+    /// Reorders goals by updating their sortOrder values
+    /// - Parameter goals: Goals in their new order
+    /// - Throws: Error if save fails
+    public func reorderGoals(_ goals: [Goal]) throws {
+        for (index, goal) in goals.enumerated() {
+            goal.sortOrder = index
+        }
+        try modelContext.save()
     }
 
     public func createGoal(_ goal: Goal) throws {

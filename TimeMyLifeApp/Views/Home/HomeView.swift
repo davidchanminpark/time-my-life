@@ -5,10 +5,12 @@
 
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct HomeView: View {
     @State private var viewModel: MainViewModel
     @State private var greetingText: String = ""
+    @State private var draggingActivityID: UUID?
 
     @AppStorage("midnightModePreference") private var midnightModePreference: String = "unset"
     @AppStorage("lastMidnightPromptDate") private var lastMidnightPromptDate: String = ""
@@ -203,6 +205,16 @@ struct HomeView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .onDrag {
+                    draggingActivityID = activity.id
+                    return NSItemProvider(object: activity.id.uuidString as NSString)
+                }
+                .onDrop(of: [.text], delegate: ActivityDropDelegate(
+                    activity: activity,
+                    activities: $viewModel.activities,
+                    draggingID: $draggingActivityID,
+                    onReorder: { viewModel.saveActivityOrder() }
+                ))
             }
         }
     }
@@ -321,5 +333,39 @@ private struct AlertModifiers: ViewModifier {
             } message: {
                 Text("Do you want to continue yesterday's tasks past midnight?")
             }
+    }
+}
+
+// MARK: - Activity Drop Delegate
+
+private struct ActivityDropDelegate: DropDelegate {
+    let activity: Activity
+    @Binding var activities: [Activity]
+    @Binding var draggingID: UUID?
+    let onReorder: () -> Void
+
+    func dropEntered(info: DropInfo) {
+        guard let draggingID,
+              draggingID != activity.id,
+              let fromIndex = activities.firstIndex(where: { $0.id == draggingID }),
+              let toIndex = activities.firstIndex(where: { $0.id == activity.id }) else { return }
+
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            activities.move(fromOffsets: IndexSet(integer: fromIndex), toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex)
+        }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggingID = nil
+        onReorder()
+        return true
+    }
+
+    func dropExited(info: DropInfo) {
+        // No action needed
     }
 }

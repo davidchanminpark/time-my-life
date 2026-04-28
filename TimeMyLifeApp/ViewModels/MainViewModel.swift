@@ -109,6 +109,17 @@ public class MainViewModel {
         }
     }
 
+    /// Persists the current activity order to SwiftData
+    public func saveActivityOrder() {
+        do {
+            try dataService.reorderActivities(activities)
+        } catch {
+            #if DEBUG
+            print("❌ MainViewModel: Failed to reorder activities: \(error)")
+            #endif
+        }
+    }
+
     /// Checks if we should show the midnight mode prompt
     /// - Parameter midnightPreference: Current user preference
     /// - Parameter lastPromptDate: Last date the prompt was shown

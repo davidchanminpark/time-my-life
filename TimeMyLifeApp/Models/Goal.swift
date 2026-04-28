@@ -42,6 +42,9 @@ public final class Goal {
     /// nil means the streak has never been evaluated (needs full recompute)
     public var lastStreakDate: Date?
 
+    /// Sort order for user-defined ordering (lower = higher in list)
+    public var sortOrder: Int
+
     // MARK: - Initialization
 
     public init(
@@ -52,7 +55,8 @@ public final class Goal {
         isActive: Bool = true,
         createdDate: Date = Date(),
         currentStreak: Int = 0,
-        lastStreakDate: Date? = nil
+        lastStreakDate: Date? = nil,
+        sortOrder: Int = Int.max
     ) {
         self.id = id
         self.activityID = activityID
@@ -62,6 +66,7 @@ public final class Goal {
         self.createdDate = createdDate
         self.currentStreak = currentStreak
         self.lastStreakDate = lastStreakDate
+        self.sortOrder = sortOrder
     }
 }
 
@@ -70,7 +75,7 @@ public final class Goal {
 extension Goal: Codable {
     private enum CodingKeys: String, CodingKey {
         case id, activityID, frequency, targetSeconds, isActive, createdDate
-        case currentStreak, lastStreakDate
+        case currentStreak, lastStreakDate, sortOrder
     }
 
     public convenience init(from decoder: Decoder) throws {
@@ -83,6 +88,7 @@ extension Goal: Codable {
         let createdDate = try container.decode(Date.self, forKey: .createdDate)
         let currentStreak = try container.decodeIfPresent(Int.self, forKey: .currentStreak) ?? 0
         let lastStreakDate = try container.decodeIfPresent(Date.self, forKey: .lastStreakDate)
+        let sortOrder = try container.decodeIfPresent(Int.self, forKey: .sortOrder) ?? Int.max
         self.init(
             id: id,
             activityID: activityID,
@@ -91,7 +97,8 @@ extension Goal: Codable {
             isActive: isActive,
             createdDate: createdDate,
             currentStreak: currentStreak,
-            lastStreakDate: lastStreakDate
+            lastStreakDate: lastStreakDate,
+            sortOrder: sortOrder
         )
     }
 
@@ -105,5 +112,6 @@ extension Goal: Codable {
         try container.encode(createdDate, forKey: .createdDate)
         try container.encode(currentStreak, forKey: .currentStreak)
         try container.encodeIfPresent(lastStreakDate, forKey: .lastStreakDate)
+        try container.encode(sortOrder, forKey: .sortOrder)
     }
 }
