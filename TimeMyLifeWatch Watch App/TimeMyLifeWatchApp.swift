@@ -97,6 +97,7 @@ struct TimeMyLifeWatch_Watch_AppApp: App {
         var body: some Scene {
             WindowGroup {
                 ContentView(dataService: dataService, timerService: timerService)
+                    .tint(nil)
             }
             .modelContainer(modelContainer)
             .onChange(of: scenePhase) { oldPhase, newPhase in

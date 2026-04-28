@@ -54,8 +54,7 @@ struct ActivityTimerView: View {
         VStack(spacing: 0) {
             // Activity name with colored background
             Text(vm.activity.name)
-                .font(.title3)
-                .fontWeight(.semibold)
+                .font(.system(.title3, design: .rounded, weight: .semibold))
                 .foregroundColor(vm.activity.color())
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -84,12 +83,11 @@ struct ActivityTimerView: View {
                 }
             } label: {
                 Text(vm.isRunning ? "Stop" : "Start")
-                    .font(.headline)
-                    .fontWeight(.semibold)
+                    .font(.system(.headline, design: .rounded, weight: .semibold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 44)
-                    .background(vm.isRunning ? Color.red : Color.green)
+                    .background(vm.isRunning ? Color.watchStop : Color.watchAccent)
                     .cornerRadius(22)
             }
             .buttonStyle(.plain)
@@ -98,18 +96,17 @@ struct ActivityTimerView: View {
             // Accumulated time for the target date
             HStack(spacing: 4) {
                 Text("Total")
-                    .font(.caption2)
+                    .font(.system(.caption2, design: .rounded))
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
 
                 if vm.accumulatedTime > 0 {
                     Text(vm.formatDuration(vm.accumulatedTime))
-                        .font(.callout)
-                        .fontWeight(.semibold)
+                        .font(.system(.callout, design: .rounded, weight: .semibold))
                         .monospacedDigit()
                 } else {
                     Text("--:--")
-                        .font(.callout)
+                        .font(.system(.callout, design: .rounded))
                         .foregroundStyle(.tertiary)
                 }
             }

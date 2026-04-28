@@ -113,14 +113,14 @@ struct MainView: View {
     private func dayToggleButtonLabel(for mode: MainViewModel.ViewMode) -> some View {
         let isSelected = viewModel.viewMode == mode
         return Text(mode.rawValue)
-            .font(.caption)
+            .font(.system(.caption, design: .rounded))
             .fontWeight(isSelected ? .semibold : .regular)
             .foregroundColor(isSelected ? .white : .secondary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelected ? Color.blue : Color.clear)
+                    .fill(isSelected ? Color.watchAccent : Color.clear)
             )
     }
     
@@ -153,6 +153,7 @@ struct MainView: View {
                 SettingsView()
             } label: {
                 Image(systemName: "gearshape.fill")
+                    .foregroundStyle(.white)
             }
         }
 
@@ -162,12 +163,14 @@ struct MainView: View {
                     viewModel.showActivityLimitAlert = true
                 } label: {
                     Image(systemName: "plus")
+                        .foregroundStyle(.white)
                 }
             } else {
                 NavigationLink {
                     ActivityFormView(mode: .create)
                 } label: {
                     Image(systemName: "plus")
+                        .foregroundStyle(.white)
                 }
             }
         }

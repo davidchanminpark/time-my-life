@@ -22,7 +22,7 @@ struct ActivityRowView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         Text(activity.name)
-                            .font(.headline)
+                            .font(.system(.headline, design: .rounded))
                             .foregroundColor(activity.textColor())
                             .lineLimit(1)
 
@@ -32,11 +32,11 @@ struct ActivityRowView: View {
                     // Show accumulated time if any
                     if displayedDuration > 0 {
                         Text(displayedDuration.formatted())
-                            .font(.caption)
+                            .font(.system(.caption, design: .rounded))
                             .foregroundColor(activity.textColor().opacity(0.9))
                     } else {
                         Text("Not started")
-                            .font(.caption)
+                            .font(.system(.caption, design: .rounded))
                             .foregroundColor(activity.textColor().opacity(0.7))
                     }
                 }
@@ -61,7 +61,7 @@ struct ActivityRowView: View {
             .overlay(
                 // Highlight border when timer is running
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isTimerRunning ? Color.white : Color.clear, lineWidth: 2)
+                    .stroke(isTimerRunning ? Color.watchAccent : Color.clear, lineWidth: 2)
             )
         }
         .buttonStyle(.plain)

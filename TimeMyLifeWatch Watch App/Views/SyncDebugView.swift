@@ -18,7 +18,7 @@ struct SyncDebugView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Sync Debug")
-                    .font(.headline)
+                    .font(.system(.headline, design: .rounded))
 
                 HStack {
                     Text("Status:")

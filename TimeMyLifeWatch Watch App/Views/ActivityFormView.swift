@@ -48,9 +48,9 @@ struct ActivityFormView: View {
     var body: some View {
         List {
             // Details section
-            Section() {
-                // Activity name input using TextFieldLink for better watchOS keyboard support
-                VStack {
+            Section {
+                // Activity name input
+                VStack(alignment: .leading, spacing: 4) {
                     TextFieldLink(prompt: Text("Enter activity name")) {
                         Text(vm.trimmedName.isEmpty ? "Activity name" : vm.trimmedName)
                             .foregroundStyle(vm.trimmedName.isEmpty ? .secondary : .primary)
@@ -58,37 +58,37 @@ struct ActivityFormView: View {
                         vm.updateName(newValue)
                     }
                     .buttonStyle(.plain)
+
+                    if let error = vm.nameValidationError {
+                        Text(error)
+                            .font(.caption2)
+                            .foregroundStyle(.red)
+                    } else if !vm.trimmedName.isEmpty {
+                        Text("\(vm.nameCharactersRemaining) characters remaining")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
-                if let error = vm.nameValidationError {
-                    Text(error)
-                        .font(.caption2)
-                        .foregroundStyle(.red)
-                } else {
-                    Text("\(vm.nameCharactersRemaining) characters remaining")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-
-                // Category input using TextFieldLink for better watchOS keyboard support
-                HStack {
+                // Category input
+                VStack(alignment: .leading, spacing: 4) {
                     TextFieldLink(prompt: Text("Enter Category")) {
-                        Text(vm.trimmedCategory.isEmpty ? "Category Name (optional)" : vm.trimmedCategory)
+                        Text(vm.trimmedCategory.isEmpty ? "Category (optional)" : vm.trimmedCategory)
                             .foregroundStyle(vm.trimmedCategory.isEmpty ? .secondary : .primary)
                     } onSubmit: { newValue in
                         vm.updateCategory(newValue)
                     }
                     .buttonStyle(.plain)
-                }
 
-                if let error = vm.categoryValidationError {
-                    Text(error)
-                        .font(.caption2)
-                        .foregroundStyle(.red)
-                } else if !vm.trimmedCategory.isEmpty {
-                    Text("\(vm.categoryCharactersRemaining) characters remaining")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                    if let error = vm.categoryValidationError {
+                        Text(error)
+                            .font(.caption2)
+                            .foregroundStyle(.red)
+                    } else if !vm.trimmedCategory.isEmpty {
+                        Text("\(vm.categoryCharactersRemaining) characters remaining")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
 
@@ -257,7 +257,7 @@ struct ColorSelectionView: View {
 
                         if selectedColorHex == colorOption.hex {
                             Image(systemName: "checkmark")
-                                .foregroundStyle(.tint)
+                                .foregroundStyle(Color.watchAccent)
                         }
                     }
                 }

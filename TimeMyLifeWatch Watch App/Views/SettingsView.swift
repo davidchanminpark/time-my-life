@@ -60,10 +60,10 @@ struct SettingsView: View {
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(activity.name)
-                                    .font(.headline)
+                                    .font(.system(.headline, design: .rounded))
 
                                 Text(activity.category)
-                                    .font(.caption2)
+                                    .font(.system(.caption2, design: .rounded))
                                     .foregroundStyle(.secondary)
                             }
 
@@ -72,7 +72,7 @@ struct SettingsView: View {
                             // Wrench icon to indicate editable
                             Image(systemName: "wrench.fill")
                                 .font(.caption)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Color.watchAccent)
                         }
                     }
                 }
