@@ -136,10 +136,12 @@ struct ActivityTimerView: View {
     // MARK: - Timer Functions
 
     private func startTimer() {
+        WKInterfaceDevice.current().play(.start)
         vm.startTimer()
     }
 
     private func stopTimer() {
+        WKInterfaceDevice.current().play(.stop)
         Task {
             await vm.stopTimer()
         }
