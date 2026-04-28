@@ -7,6 +7,7 @@ import Foundation
 import Combine
 import SwiftData
 import Observation
+import WidgetKit
 
 /// Errors that can occur in TimerService
 public enum TimerServiceError: Error, LocalizedError {
@@ -126,6 +127,17 @@ public class TimerService {
         )
         #endif
 
+        // Update watch complication (watchOS only)
+        #if os(watchOS)
+        WatchTimerSharedState.writeRunning(
+            activityName: activity.name,
+            activityEmoji: activity.emoji,
+            activityColorHex: activity.colorHex,
+            startDate: startTime!
+        )
+        WidgetCenter.shared.reloadAllTimelines()
+        #endif
+
         #if DEBUG
         print("✅ TimerService: Started timer for '\(activity.name)'")
         #endif
@@ -159,6 +171,12 @@ public class TimerService {
         // End Live Activity (iOS only)
         #if os(iOS)
         liveActivityService.stop()
+        #endif
+
+        // Update watch complication (watchOS only)
+        #if os(watchOS)
+        WatchTimerSharedState.writeStopped()
+        WidgetCenter.shared.reloadAllTimelines()
         #endif
 
         // Reset local state
@@ -204,6 +222,17 @@ public class TimerService {
             startDate: startTime,
             accumulatedTime: accumulated
         )
+        #endif
+
+        // Update watch complication on resume (watchOS only)
+        #if os(watchOS)
+        WatchTimerSharedState.writeRunning(
+            activityName: activity.name,
+            activityEmoji: activity.emoji,
+            activityColorHex: activity.colorHex,
+            startDate: startTime
+        )
+        WidgetCenter.shared.reloadAllTimelines()
         #endif
 
         #if DEBUG
