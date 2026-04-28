@@ -18,6 +18,7 @@ public enum DataServiceValidationError: Error, LocalizedError {
     case invalidDuration
     case durationExceeds24Hours
     case futureDateNotAllowed
+    case dateTooFarInPast
     case activityNotFound(UUID)
     case goalTargetOutOfRange
     case duplicateGoal
@@ -42,6 +43,8 @@ public enum DataServiceValidationError: Error, LocalizedError {
             return "Duration cannot exceed 24 hours"
         case .futureDateNotAllowed:
             return "Date cannot be in the future"
+        case .dateTooFarInPast:
+            return "Date cannot be more than 1 year in the past"
         case .activityNotFound(let id):
             return "No activity found for ID \(id)"
         case .goalTargetOutOfRange:
@@ -573,6 +576,12 @@ public class DataService {
         guard duration <= maxDailySeconds else {
             throw DataServiceValidationError.durationExceeds24Hours
         }
+        // Reject dates more than 1 year in the past — prevents clock-manipulation abuse
+        let oneYearAgo = Calendar.current.date(byAdding: .year, value: -1, to: Date())!
+        guard Calendar.current.startOfDay(for: date) >= Calendar.current.startOfDay(for: oneYearAgo) else {
+            throw DataServiceValidationError.dateTooFarInPast
+        }
+        // Reject dates in the future (1 day buffer for timezone differences)
         let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: Date()))!
         guard Calendar.current.startOfDay(for: date) <= tomorrow else {
             throw DataServiceValidationError.futureDateNotAllowed
@@ -740,6 +749,12 @@ public class DataService {
             let maxDailySeconds: TimeInterval = 86_400
             guard timeEntry.totalDuration <= maxDailySeconds else {
                 print("❌ Sync rejected: duration exceeds 24h (\(timeEntry.totalDuration)s)")
+                return
+            }
+            // Reject entries with dates more than 1 year in the past
+            let oneYearAgo = Calendar.current.date(byAdding: .year, value: -1, to: Date())!
+            guard timeEntry.date >= Calendar.current.startOfDay(for: oneYearAgo) else {
+                print("❌ Sync rejected: time entry date is too far in the past (\(timeEntry.date))")
                 return
             }
             // Reject entries with dates far in the future (allow 1 day buffer for timezone differences)

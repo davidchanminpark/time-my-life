@@ -201,6 +201,11 @@ public class TimerService {
         return (activityID: activityID, date: date, duration: duration)
     }
 
+    /// Maximum duration a single timer session can accumulate (24 hours).
+    /// If a persisted timer exceeds this (e.g. app not opened for days, clock
+    /// manipulation), the excess is discarded to prevent data corruption.
+    private static let maxTimerDuration: TimeInterval = 86_400
+
     /// Resumes a timer that was previously started
     /// - Parameters:
     ///   - activity: Activity being timed
@@ -210,12 +215,34 @@ public class TimerService {
     public func resume(activity: Activity, startTime: Date, targetDate: Date) throws {
         let normalizedDate = Calendar.current.startOfDay(for: targetDate)
 
+        // Sanity-check the persisted startTime
+        let rawElapsed = Date().timeIntervalSince(startTime)
+
+        // Reject future startTimes (negative elapsed) — likely clock tampering
+        guard rawElapsed >= 0 else {
+            #if DEBUG
+            print("⚠️ TimerService: startTime is in the future, discarding stale timer")
+            #endif
+            try clearPersistedTimer()
+            return
+        }
+
+        // Cap elapsed time at 24h to prevent phantom durations from clock
+        // manipulation or the app not being opened for extended periods
+        let cappedElapsed = min(rawElapsed, Self.maxTimerDuration)
+
         // Update local state
         self.currentActivity = activity
         self.currentDate = normalizedDate
-        self.startTime = startTime
+        self.startTime = Date().addingTimeInterval(-cappedElapsed)
         self.isRunning = true
-        self.elapsedTime = Date().timeIntervalSince(startTime)
+        self.elapsedTime = cappedElapsed
+
+        if rawElapsed > Self.maxTimerDuration {
+            #if DEBUG
+            print("⚠️ TimerService: Timer exceeded 24h (\(formatDuration(rawElapsed))), capped to 24h")
+            #endif
+        }
 
         // Start UI updates
         startTimerUpdates()
@@ -290,7 +317,9 @@ public class TimerService {
         return isRunning ? currentDate : nil
     }
 
-    /// Restores timer state from persisted ActiveTimer and activity
+    /// Restores timer state from persisted ActiveTimer and activity.
+    /// Validates the persisted state before resuming — rejects startTimes
+    /// in the future or with a startDate that doesn't match a recent day.
     /// - Parameters:
     ///   - activeTimer: The persisted active timer state
     ///   - activity: The activity being timed
@@ -302,7 +331,26 @@ public class TimerService {
             return
         }
 
-        // Resume the timer
+        // Reject startTime in the future — likely clock tampering
+        guard startTime <= Date() else {
+            #if DEBUG
+            print("⚠️ TimerService: Persisted startTime is in the future, clearing stale timer")
+            #endif
+            try clearPersistedTimer()
+            return
+        }
+
+        // Reject startDate more than 2 days ago — stale timer from days-old session
+        let twoDaysAgo = Calendar.current.date(byAdding: .day, value: -2, to: Calendar.current.startOfDay(for: Date()))!
+        guard startDate >= twoDaysAgo else {
+            #if DEBUG
+            print("⚠️ TimerService: Persisted startDate is too old (\(startDate)), clearing stale timer")
+            #endif
+            try clearPersistedTimer()
+            return
+        }
+
+        // Resume the timer (resume() applies its own 24h cap)
         try resume(activity: activity, startTime: startTime, targetDate: startDate)
     }
 
@@ -384,6 +432,24 @@ public class TimerService {
     }
 
     // MARK: - Private Methods
+
+    /// Clears persisted ActiveTimer state without saving a time entry.
+    /// Used when the persisted timer is stale or invalid (e.g. future startTime).
+    private func clearPersistedTimer() throws {
+        let activeTimer = try ActiveTimer.shared(in: modelContext)
+        activeTimer.activityID = nil
+        activeTimer.startTime = nil
+        activeTimer.startDate = nil
+        activeTimer.isRunning = false
+        try modelContext.save()
+
+        // Reset local state
+        self.isRunning = false
+        self.currentActivity = nil
+        self.currentDate = nil
+        self.startTime = nil
+        self.elapsedTime = 0
+    }
 
     /// Fetches the accumulated duration already logged for an activity on a given date.
     /// The Live Activity widget runs in a separate process and can't observe the app's
