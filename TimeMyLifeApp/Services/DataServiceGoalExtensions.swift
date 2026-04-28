@@ -57,6 +57,11 @@ extension DataService {
     }
 
     public func createGoal(_ goal: Goal) throws {
+        try validateGoal(goal)
+        if try goalExists(activityID: goal.activityID, frequency: goal.frequency) {
+            throw DataServiceValidationError.duplicateGoal
+        }
+
         modelContext.insert(goal)
         try modelContext.save()
 
@@ -66,10 +71,24 @@ extension DataService {
     }
 
     public func updateGoal(_ goal: Goal) throws {
+        try validateGoal(goal)
         try modelContext.save()
 
         Task {
             try? await syncService?.syncModel(goal, type: .goal, action: .update)
+        }
+    }
+
+    // MARK: - Goal Validation
+
+    private func validateGoal(_ goal: Goal) throws {
+        let minTarget = 15 * 60   // 15 minutes
+        let maxTarget = 24 * 3600 // 24 hours
+        guard goal.targetSeconds >= minTarget, goal.targetSeconds <= maxTarget else {
+            throw DataServiceValidationError.goalTargetOutOfRange
+        }
+        guard try fetchActivity(id: goal.activityID) != nil else {
+            throw DataServiceValidationError.activityNotFound(goal.activityID)
         }
     }
 

@@ -7,6 +7,51 @@ import Foundation
 import SwiftData
 import Observation
 
+/// Validation errors thrown by DataService CRUD methods
+public enum DataServiceValidationError: Error, LocalizedError {
+    case activityNameEmpty
+    case activityNameTooLong
+    case categoryTooLong
+    case noScheduledDays
+    case invalidWeekday(Int)
+    case activityLimitReached
+    case invalidDuration
+    case durationExceeds24Hours
+    case futureDateNotAllowed
+    case activityNotFound(UUID)
+    case goalTargetOutOfRange
+    case duplicateGoal
+
+    public var errorDescription: String? {
+        switch self {
+        case .activityNameEmpty:
+            return "Activity name must not be empty"
+        case .activityNameTooLong:
+            return "Activity name must not exceed \(AppConstants.maxNameLength) characters"
+        case .categoryTooLong:
+            return "Category must not exceed \(AppConstants.maxCategoryLength) characters"
+        case .noScheduledDays:
+            return "At least one valid scheduled day is required"
+        case .invalidWeekday(let day):
+            return "Invalid weekday: \(day). Must be 1–7"
+        case .activityLimitReached:
+            return "Maximum of \(AppConstants.maxActivities) activities reached"
+        case .invalidDuration:
+            return "Duration must be a finite non-negative number"
+        case .durationExceeds24Hours:
+            return "Duration cannot exceed 24 hours"
+        case .futureDateNotAllowed:
+            return "Date cannot be in the future"
+        case .activityNotFound(let id):
+            return "No activity found for ID \(id)"
+        case .goalTargetOutOfRange:
+            return "Goal target must be between 15 minutes and 24 hours"
+        case .duplicateGoal:
+            return "A goal with this frequency already exists for this activity"
+        }
+    }
+}
+
 /// Centralized service for all SwiftData operations
 /// Provides a single source of truth for data operations across the app
 @Observable
@@ -118,11 +163,17 @@ public class DataService {
 
     /// Creates a new activity
     /// - Parameter activity: Activity to create
-    /// - Throws: Error if save fails
+    /// - Throws: DataServiceValidationError if validation fails, or Error if save fails
     public func createActivity(_ activity: Activity) throws {
+        try validateActivity(activity)
+        let count = try getActivityCount()
+        guard count < AppConstants.maxActivities else {
+            throw DataServiceValidationError.activityLimitReached
+        }
+
         modelContext.insert(activity)
         try modelContext.save()
-        
+
         // Sync to counterpart device
         Task {
             try? await syncService?.syncModel(activity, type: .activity, action: .create)
@@ -131,10 +182,11 @@ public class DataService {
     
     /// Updates an existing activity
     /// - Parameter activity: Activity to update (changes are already made to the object)
-    /// - Throws: Error if save fails
+    /// - Throws: DataServiceValidationError if validation fails, or Error if save fails
     public func updateActivity(_ activity: Activity) throws {
+        try validateActivity(activity)
         try modelContext.save()
-        
+
         // Sync to counterpart device
         Task {
             try? await syncService?.syncModel(activity, type: .activity, action: .update)
@@ -224,9 +276,11 @@ public class DataService {
         date: Date,
         duration: TimeInterval
     ) throws {
+        try validateTimeEntryInput(activityID: activityID, duration: duration, date: date)
+
         let normalizedDate = Calendar.current.startOfDay(for: date)
         let validDuration = max(0, duration)
-        
+
         // Try to find existing entry
         let predicate = #Predicate<TimeEntry> { entry in
             entry.activityID == activityID && entry.date == normalizedDate
@@ -284,6 +338,8 @@ public class DataService {
         date: Date,
         duration: TimeInterval
     ) throws {
+        try validateTimeEntryInput(activityID: activityID, duration: duration, date: date)
+
         let normalizedDate = Calendar.current.startOfDay(for: date)
         let validDuration = max(0, duration)
 
@@ -484,6 +540,48 @@ public class DataService {
         return max(firstActivityMonthStart, twelveMonthWindowStart)
     }
     
+    // MARK: - Input Validation
+
+    /// Validates an activity's fields against the app's business rules.
+    private func validateActivity(_ activity: Activity) throws {
+        let trimmedName = activity.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            throw DataServiceValidationError.activityNameEmpty
+        }
+        guard trimmedName.count <= AppConstants.maxNameLength else {
+            throw DataServiceValidationError.activityNameTooLong
+        }
+        let trimmedCategory = activity.category.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedCategory.count <= AppConstants.maxCategoryLength else {
+            throw DataServiceValidationError.categoryTooLong
+        }
+        let validDays = activity.scheduledDayInts.filter { $0 >= 1 && $0 <= 7 }
+        guard !validDays.isEmpty else {
+            throw DataServiceValidationError.noScheduledDays
+        }
+        for day in activity.scheduledDayInts where day < 1 || day > 7 {
+            throw DataServiceValidationError.invalidWeekday(day)
+        }
+    }
+
+    /// Validates time entry inputs against business rules.
+    private func validateTimeEntryInput(activityID: UUID, duration: TimeInterval, date: Date) throws {
+        guard duration.isFinite, duration >= 0 else {
+            throw DataServiceValidationError.invalidDuration
+        }
+        let maxDailySeconds: TimeInterval = 86_400
+        guard duration <= maxDailySeconds else {
+            throw DataServiceValidationError.durationExceeds24Hours
+        }
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: Date()))!
+        guard Calendar.current.startOfDay(for: date) <= tomorrow else {
+            throw DataServiceValidationError.futureDateNotAllowed
+        }
+        guard try fetchActivity(id: activityID) != nil else {
+            throw DataServiceValidationError.activityNotFound(activityID)
+        }
+    }
+
     // MARK: - Utility Methods
     
     /// Clears all data from the database (useful for testing)
