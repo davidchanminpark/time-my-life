@@ -21,6 +21,7 @@ public enum DataServiceValidationError: Error, LocalizedError {
     case dateTooFarInPast
     case activityNotFound(UUID)
     case goalTargetOutOfRange
+    case invalidHexColor
     case duplicateGoal
 
     public var errorDescription: String? {
@@ -47,6 +48,8 @@ public enum DataServiceValidationError: Error, LocalizedError {
             return "Date cannot be more than 1 year in the past"
         case .activityNotFound(let id):
             return "No activity found for ID \(id)"
+        case .invalidHexColor:
+            return "Invalid hex color format. Must be 6 hex characters (e.g., FF5733)"
         case .goalTargetOutOfRange:
             return "Goal target must be between 15 minutes and 24 hours"
         case .duplicateGoal:
@@ -554,6 +557,9 @@ public class DataService {
         guard trimmedName.count <= AppConstants.maxNameLength else {
             throw DataServiceValidationError.activityNameTooLong
         }
+        guard Self.isValidHex(activity.colorHex) else {
+            throw DataServiceValidationError.invalidHexColor
+        }
         let trimmedCategory = activity.category.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmedCategory.count <= AppConstants.maxCategoryLength else {
             throw DataServiceValidationError.categoryTooLong
@@ -565,6 +571,15 @@ public class DataService {
         for day in activity.scheduledDayInts where day < 1 || day > 7 {
             throw DataServiceValidationError.invalidWeekday(day)
         }
+    }
+
+    /// Checks if a hex color string is valid (6 hex characters, with or without # prefix).
+    static func isValidHex(_ hex: String) -> Bool {
+        var sanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "#", with: "")
+        guard sanitized.count == 6 else { return false }
+        let hexChars = CharacterSet(charactersIn: "0123456789ABCDEFabcdef")
+        return sanitized.unicodeScalars.allSatisfy { hexChars.contains($0) }
     }
 
     /// Validates time entry inputs against business rules.
@@ -663,6 +678,10 @@ public class DataService {
             let trimmedName = activity.name.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmedName.isEmpty, trimmedName.count <= AppConstants.maxNameLength else {
                 print("❌ Sync rejected: activity name invalid (empty or >\(AppConstants.maxNameLength) chars)")
+                return
+            }
+            guard Self.isValidHex(activity.colorHex) else {
+                print("❌ Sync rejected: invalid colorHex '\(activity.colorHex)'")
                 return
             }
             let trimmedCategory = activity.category.trimmingCharacters(in: .whitespacesAndNewlines)
