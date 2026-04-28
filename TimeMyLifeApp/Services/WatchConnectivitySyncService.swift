@@ -15,6 +15,12 @@ public class WatchConnectivitySyncService: NSObject, SyncService {
     private var messageQueue: [SyncMessage] = []
     private let maxQueueSize = 100
 
+    /// Rate limiter: tracks timestamps of recently processed inbound sync messages.
+    /// Drops messages that arrive faster than `rateLimitWindow` allows.
+    private var recentMessageTimestamps: [Date] = []
+    private let rateLimitMaxMessages = 30
+    private let rateLimitWindow: TimeInterval = 10 // seconds
+
     public var onSyncMessageReceived: ((SyncMessage) -> Void)?
 
     public var isCounterpartReachable: Bool {
@@ -163,6 +169,19 @@ public class WatchConnectivitySyncService: NSObject, SyncService {
             print("❌ Invalid sync message data")
             return
         }
+
+        // Rate limit: drop messages if too many arrive in a short window
+        let now = Date()
+        recentMessageTimestamps = recentMessageTimestamps.filter {
+            now.timeIntervalSince($0) < rateLimitWindow
+        }
+        guard recentMessageTimestamps.count < rateLimitMaxMessages else {
+            #if DEBUG
+            print("⚠️ Sync rate limit hit (\(rateLimitMaxMessages) msgs / \(Int(rateLimitWindow))s), dropping message")
+            #endif
+            return
+        }
+        recentMessageTimestamps.append(now)
 
         do {
             let decoder = JSONDecoder()

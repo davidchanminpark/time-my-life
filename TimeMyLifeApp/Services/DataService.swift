@@ -65,6 +65,10 @@ public enum DataServiceValidationError: Error, LocalizedError {
 public class DataService {
     internal let modelContext: ModelContext
     var syncService: SyncService?
+
+    /// Maximum number of time entries allowed per activity.
+    /// At 1 entry per day this covers ~2 years — well beyond the 1-year date guard.
+    private let maxTimeEntriesPerActivity = 730
     
     public init(modelContext: ModelContext, syncService: SyncService? = nil) {
         self.modelContext = modelContext
@@ -786,6 +790,15 @@ public class DataService {
             guard try fetchActivity(id: timeEntry.activityID) != nil else {
                 print("❌ Sync rejected: no activity found for ID \(timeEntry.activityID)")
                 return
+            }
+            // Cap per-activity entry count to prevent unbounded data growth (new entries only)
+            let existingEntries = try fetchTimeEntries(for: timeEntry.activityID, on: timeEntry.date)
+            if existingEntries.isEmpty {
+                let allEntries = try fetchAllTimeEntries(for: timeEntry.activityID)
+                guard allEntries.count < maxTimeEntriesPerActivity else {
+                    print("❌ Sync rejected: entry limit (\(maxTimeEntriesPerActivity)) reached for activity \(timeEntry.activityID)")
+                    return
+                }
             }
 
             // Check if time entry already exists
