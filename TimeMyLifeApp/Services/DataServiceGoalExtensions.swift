@@ -90,6 +90,27 @@ extension DataService {
         switch message.action {
         case .create, .update:
             let goal = try JSONDecoder().decode(Goal.self, from: message.data)
+
+            // Validate synced data
+            let minTarget = 15 * 60   // 15 minutes (matches UI stepper minimum)
+            let maxTarget = 24 * 3600 // 24 hours
+            guard goal.targetSeconds >= minTarget, goal.targetSeconds <= maxTarget else {
+                print("❌ Sync rejected: goal targetSeconds out of range (\(goal.targetSeconds))")
+                return
+            }
+            // Verify the referenced activity exists
+            guard try fetchActivity(id: goal.activityID) != nil else {
+                print("❌ Sync rejected: no activity found for goal's activityID \(goal.activityID)")
+                return
+            }
+            // Prevent duplicate goals (same activity + frequency) for new goals
+            if try fetchGoal(id: goal.id) == nil {
+                if try goalExists(activityID: goal.activityID, frequency: goal.frequency) {
+                    print("❌ Sync rejected: duplicate goal for activity \(goal.activityID) / \(goal.frequency.rawValue)")
+                    return
+                }
+            }
+
             if let existing = try fetchGoal(id: goal.id) {
                 existing.activityID = goal.activityID
                 existing.frequency = goal.frequency

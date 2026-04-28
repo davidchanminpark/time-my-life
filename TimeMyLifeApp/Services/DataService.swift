@@ -551,13 +551,38 @@ public class DataService {
         switch message.action {
         case .create, .update:
             let activity = try JSONDecoder().decode(Activity.self, from: message.data)
-            
+
+            // Validate synced data — same rules the UI enforces
+            let trimmedName = activity.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedName.isEmpty, trimmedName.count <= AppConstants.maxNameLength else {
+                print("❌ Sync rejected: activity name invalid (empty or >\(AppConstants.maxNameLength) chars)")
+                return
+            }
+            let trimmedCategory = activity.category.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmedCategory.count <= AppConstants.maxCategoryLength else {
+                print("❌ Sync rejected: category too long (>\(AppConstants.maxCategoryLength) chars)")
+                return
+            }
+            let validDays = activity.scheduledDayInts.filter { $0 >= 1 && $0 <= 7 }
+            guard !validDays.isEmpty else {
+                print("❌ Sync rejected: no valid scheduled days")
+                return
+            }
+            // Enforce max activity count for new activities
+            if try fetchActivity(id: activity.id) == nil {
+                let count = try getActivityCount()
+                guard count < AppConstants.maxActivities else {
+                    print("❌ Sync rejected: activity limit (\(AppConstants.maxActivities)) reached")
+                    return
+                }
+            }
+
             // Check if activity already exists
             if let existing = try fetchActivity(id: activity.id) {
                 // Update existing activity
-                existing.name = activity.name
+                existing.name = trimmedName
                 existing.colorHex = activity.colorHex
-                existing.category = activity.category
+                existing.category = trimmedCategory
 
                 // Update scheduled days relationship
                 // Delete old scheduled days
@@ -565,10 +590,9 @@ public class DataService {
                     modelContext.delete(day)
                 }
                 existing.scheduledDays.removeAll()
-                
-                // Create new scheduled days from the decoded activity
-                let scheduledDayInts = activity.scheduledDayInts
-                let newDays = scheduledDayInts.map { weekday in
+
+                // Create new scheduled days from validated weekdays
+                let newDays = validDays.map { weekday in
                     ScheduledDay(weekday: weekday, activity: existing)
                 }
                 existing.scheduledDays = newDays
@@ -609,6 +633,29 @@ public class DataService {
         case .create, .update:
             let timeEntry = try JSONDecoder().decode(TimeEntry.self, from: message.data)
 
+            // Validate synced data
+            guard timeEntry.totalDuration.isFinite, timeEntry.totalDuration >= 0 else {
+                print("❌ Sync rejected: invalid duration (\(timeEntry.totalDuration))")
+                return
+            }
+            // Cap at 24 hours per entry — no single day can exceed this
+            let maxDailySeconds: TimeInterval = 86_400
+            guard timeEntry.totalDuration <= maxDailySeconds else {
+                print("❌ Sync rejected: duration exceeds 24h (\(timeEntry.totalDuration)s)")
+                return
+            }
+            // Reject entries with dates far in the future (allow 1 day buffer for timezone differences)
+            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: Date()))!
+            guard timeEntry.date <= tomorrow else {
+                print("❌ Sync rejected: time entry date is in the future (\(timeEntry.date))")
+                return
+            }
+            // Verify the referenced activity exists
+            guard try fetchActivity(id: timeEntry.activityID) != nil else {
+                print("❌ Sync rejected: no activity found for ID \(timeEntry.activityID)")
+                return
+            }
+
             // Check if time entry already exists
             let entries = try fetchTimeEntries(for: timeEntry.activityID, on: timeEntry.date)
             if let existing = entries.first {
@@ -630,7 +677,7 @@ public class DataService {
 
         case .delete:
             guard let entryId = UUID(uuidString: message.modelId) else { return }
-            
+
             // Find and delete the entry
             let predicate = #Predicate<TimeEntry> { entry in
                 entry.id == entryId
