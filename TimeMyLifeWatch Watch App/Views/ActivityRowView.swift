@@ -29,13 +29,17 @@ struct ActivityRowView: View {
 
                     }
 
-                    // Show accumulated time if any
+                    // Show accumulated time or running indicator
                     if displayedDuration > 0 {
-                        Text(displayedDuration.formatted())
+                        Text(displayedDuration.formattedDuration(style: .compact))
+                            .font(.system(.caption, design: .rounded))
+                            .foregroundColor(activity.textColor().opacity(0.9))
+                    } else if isTimerRunning {
+                        Text("Running...")
                             .font(.system(.caption, design: .rounded))
                             .foregroundColor(activity.textColor().opacity(0.9))
                     } else {
-                        Text("Not started")
+                        Text("0m")
                             .font(.system(.caption, design: .rounded))
                             .foregroundColor(activity.textColor().opacity(0.7))
                     }

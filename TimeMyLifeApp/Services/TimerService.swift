@@ -90,9 +90,17 @@ public class TimerService {
     ///   - targetDate: Date to track time for (will be normalized to start of day)
     /// - Throws: Error if unable to start timer or save state
     public func start(activity: Activity, targetDate: Date) throws {
-        // Stop any running timer first
+        // Stop any running timer first and save its time entry
         if isRunning {
-            let _ = try stop()
+            if let timerData = try stop() {
+                let _ = try TimeEntry.createOrUpdate(
+                    activityID: timerData.activityID,
+                    date: timerData.date,
+                    duration: timerData.duration,
+                    in: modelContext
+                )
+                try modelContext.save()
+            }
         }
 
         let normalizedDate = Calendar.current.startOfDay(for: targetDate)
